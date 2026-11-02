@@ -38,3 +38,7 @@ El ícono completo para Google Play se encuentra en `play_store/icono_512.png`. 
 ## v3.9
 
 Ícono del launcher con fondo artístico original (no plano). Ver `ICONO_LAUNCHER_SIN_TEXTO.png` y `VISTA_PREVIA_ICONO_v3_9.png`. `IDENTIDAD_VISUAL.md` permanece obligatorio.
+
+
+## v3.10 — Bloqueo preventivo SELECT
+Al bloquear con SELECT, no aparece un mensaje ni un panel emergente: solo se muestra una franja amarilla gruesa de ancho completo pegada al borde inferior del marcador. No oscurece la pantalla, no ocupa espacio de diseño y no intercepta eventos táctiles. Al desbloquear, desaparece. Se mantiene la alerta de desconexión.

@@ -324,7 +324,10 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
 /* SN30: indicador de conexión y bloqueo. */
 #pad-indicator{position:fixed;z-index:4;bottom:6px;left:8px;pointer-events:none;font-size:clamp(10px,1.5vw,13px);padding:3px 7px;color:#cbd0d8;background:#000b;border-radius:6px;border:1px solid #333;max-width:48vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #pad-indicator[data-state="armed"]{border-color:#4b8a65;color:#abf0c1}
-#pad-indicator[data-state="locked"]{border-color:#e4aa4b;color:#ffde9d}
+#pad-indicator[data-state="locked"]{display:none!important}
+/* Bloqueo precautorio: franja inferior a todo el ancho, sin ocultar el marcador. */
+#pad-lock-stripe{position:fixed;left:0;right:0;bottom:0;height:clamp(9px,1.5vh,16px);background:#ffd400;z-index:6;pointer-events:none;box-shadow:0 -1px 5px #ffd40066}
+#pad-lock-stripe[hidden]{display:none!important}
 #pad-indicator[data-state="ready"]{border-color:#6987be}
 .pad-section{border:1px solid #55769b;padding:10px;margin:4px 0 9px;border-radius:10px;background:#16212d}
 .pad-section h3{margin:0 0 8px;font-size:16px}
@@ -455,6 +458,7 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
 </main>
 <div id="status" aria-live="polite"></div>
 <div id="pad-indicator" data-state="offline" aria-live="polite">Control: desconectado · OFF</div>
+<div id="pad-lock-stripe" hidden aria-label="Control bloqueado" role="status"></div>
 <!-- Alerta permanente mientras el mando no está disponible. No bloquea el tacto. -->
 <div id="pad-connection-alert" data-alert="offline" role="alert" aria-live="assertive">
   <div class="pad-alert-panel">
@@ -735,7 +739,8 @@ function padUpdateUi(){
  // habilitado y desbloqueado. No confundir 'conectado' con 'operativo'.
  const alert=el('pad-connection-alert');
  alert.dataset.alert=state;
- alert.hidden=state==='armed';
+ alert.hidden=state==='armed'||state==='locked';
+ el('pad-lock-stripe').hidden=state!=='locked';
  const titles={offline:'CONTROL\nDESCONECTADO',ready:'CONTROL\nDESACTIVADO',locked:'CONTROL\nBLOQUEADO'};
  const details={offline:'MANDO SIN CONEXIÓN',ready:'ACTIVAR CONTROLES EN EL MENÚ',locked:'PULSA SELECT PARA DESBLOQUEAR'};
  if(state!=='armed'){
@@ -785,7 +790,9 @@ window.padelGamepadEvent=function(code,keyName,deviceId){
  if(action==='lock'){
   padLocked=!padLocked;
   padUpdateUi();
-  notice('Control '+(padLocked?'BLOQUEADO':'DESBLOQUEADO'));
+  // SELECT es preventivo: no mostrar mensajes ni modificar la puntuación.
+  el('status').classList.remove('visible');
+  clearTimeout(statusTimer);
   return;
  }
  if(padLocked)return;

@@ -8,8 +8,8 @@ android {
         applicationId 'cl.matchboard.app'
         minSdk 23
         targetSdk 36
-        versionCode 39
-        versionName '3.9-MATCHBOARD'
+        versionCode 40
+        versionName '3.10-MATCHBOARD'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

@@ -1,3 +1,8 @@
+## 3.10 — Indicador discreto de bloqueo
+- SELECT bloquea/desbloquea sin mensajes flotantes ni alertas de pantalla completa.
+- Franja amarilla de ancho completo en el borde inferior solo mientras el control está bloqueado.
+- No se altera el marcador, la disposición, la identidad visual o los controles existentes.
+
 ## v3.9 — Icono con fondo original
 
 Reemplazo del fondo verde plano por la ilustración original aprobada, con sus degradados y curvas. El launcher conserva MB y 2/1 y omite solo el texto pequeño. No hay cambios en menús ni reglas.
