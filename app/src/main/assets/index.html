@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#000000">
-<title>Marcador de Pádel — 8BitDo SN30 v2.8</title>
+<title>Marcador de Pádel — 8BitDo SN30 v3.1</title>
 <style>
 :root {
   color-scheme: dark;
@@ -321,19 +321,6 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
  html[data-score-style="solid"][data-layout="side"] .score-area::after{left:calc(50% + 2.5vw)}
  html[data-layout="side"] .team.serving .score-area::after{opacity:1}
 }
-/* SN30: selección del equipo activo sin confundirlo con el equipo que saca. */
-.team.pad-selected .score-area::before{
- content:'●';position:absolute;top:clamp(3px,.7vh,9px);left:clamp(3px,.6vw,10px);
- color:currentColor;font-size:clamp(16px,2.2vw,26px);line-height:1;
- pointer-events:none;z-index:2;text-shadow:0 0 5px currentColor
-}
-#pad-target{position:fixed;z-index:4;bottom:6px;right:8px;pointer-events:none;
- font-size:clamp(10px,1.5vw,13px);padding:3px 8px;font-weight:700;
- color:#fff;background:#000d;border-radius:6px;border:1px solid #555;
- white-space:nowrap
-}
-#pad-target[data-team="red"]{border-color:var(--red);color:var(--red)}
-#pad-target[data-team="blue"]{border-color:var(--blue);color:var(--blue)}
 /* SN30: indicador de conexión y bloqueo. */
 #pad-indicator{position:fixed;z-index:4;bottom:6px;left:8px;pointer-events:none;font-size:clamp(10px,1.5vw,13px);padding:3px 7px;color:#cbd0d8;background:#000b;border-radius:6px;border:1px solid #333;max-width:48vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #pad-indicator[data-state="armed"]{border-color:#4b8a65;color:#abf0c1}
@@ -350,6 +337,46 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
 .pad-mapping button[data-learning="true"]{border-color:#ffe08a;background:#614b1f}
 .pad-mapping button:focus-visible{outline:2px solid #ffe08a}
 
+/* Alerta visible desde lejos. Sin tocar los botones ni modificar el marcador. */
+#pad-connection-alert{position:fixed;inset:0;z-index:5;display:grid;place-items:center;pointer-events:none;isolation:isolate;overflow:hidden;text-align:center;font-family:Arial,Helvetica,sans-serif}
+#pad-connection-alert[hidden]{display:none!important}
+#pad-connection-alert::before{content:"";position:absolute;inset:0;z-index:-1;border:clamp(7px,1.25vw,16px) solid #ff414a;box-shadow:inset 0 0 36px #ff414a55;background:#0006;animation:pad-warning-breathe 2.3s ease-in-out infinite alternate}
+#pad-connection-alert .pad-alert-panel{width:min(93vw,1020px);max-height:89vh;min-height:min(28vh,235px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:clamp(5px,1.4vh,16px);border:clamp(3px,.45vw,7px) solid #ff666c;border-radius:clamp(14px,2.7vw,28px);background:#100d0ff5;padding:clamp(12px,3.5vh,38px) clamp(12px,3vw,46px);box-shadow:0 8px 46px #000d}
+#pad-alert-icon{font-weight:1000;color:#ff545e;font-size:clamp(34px,7vw,90px);line-height:.9}
+#pad-alert-title{margin:0;color:white;font-weight:1000;font-size:clamp(30px,6.2vw,79px);line-height:1.03;letter-spacing:-.035em;white-space:pre-line;text-shadow:0 2px 12px #000}
+#pad-alert-detail{color:#ffd7d8;font-weight:750;line-height:1.1;font-size:clamp(16px,2.9vw,38px)}
+#pad-connection-alert[data-alert="ready"]::before,#pad-connection-alert[data-alert="locked"]::before{border-color:#ffbf48;box-shadow:inset 0 0 36px #ffbf4855;background:#0004}
+#pad-connection-alert[data-alert="ready"] .pad-alert-panel,#pad-connection-alert[data-alert="locked"] .pad-alert-panel{border-color:#ffcf79}
+#pad-connection-alert[data-alert="ready"] #pad-alert-icon,#pad-connection-alert[data-alert="locked"] #pad-alert-icon{color:#ffcf79}
+#pad-connection-alert[data-alert="ready"] #pad-alert-detail,#pad-connection-alert[data-alert="locked"] #pad-alert-detail{color:#ffe5bb}
+@keyframes pad-warning-breathe{from{opacity:.7}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){#pad-connection-alert::before{animation:none}}
+@media(orientation:portrait){#pad-connection-alert .pad-alert-panel{min-height:24vh}#pad-alert-title{font-size:clamp(30px,8.8vw,66px)}#pad-alert-detail{font-size:clamp(16px,4vw,28px)}}
+/* Editor de emergencia: controles tactiles grandes y confirmacion antes de sustituir */
+#manual-edit{border:1px solid #464b55;border-radius:18px;background:#16191e;color:white;width:min(730px,96vw);max-height:92dvh;overflow-y:auto;padding:clamp(12px,2.2vw,22px);box-shadow:0 16px 75px #000d;font-family:Arial,Helvetica,sans-serif}
+#manual-edit::backdrop{background:#000d}
+#manual-edit h2{font-size:clamp(19px,3vw,27px);margin:0 0 6px}
+#manual-edit p.manual-lead{color:#c1c7d0;font-size:clamp(12px,1.8vw,15px);line-height:1.35;margin:0 0 12px}
+.manual-switch{background:#282e38;padding:10px;border-radius:10px;margin-bottom:12px;font-size:14px}
+.manual-switch label{display:flex;align-items:center;gap:10px}
+.manual-switch input{width:22px;height:22px;flex:none;accent-color:#70a8fa}
+.manual-teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.manual-team{min-width:0;border:1px solid #575d68;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:9px}
+.manual-team legend{font-size:15px;font-weight:800;padding:0 5px}
+.manual-red legend{color:#ff7777}.manual-blue legend{color:#6cbdff}
+#manual-edit label{font-weight:650;font-size:clamp(12px,1.8vw,15px);line-height:1.25}
+.manual-team label,#manual-edit .manual-extra label{display:flex;flex-direction:column;gap:4px}
+#manual-edit input:not([type=checkbox]),#manual-edit select{width:100%;height:44px;border:1px solid #636a77;border-radius:8px;background:#272c36;color:white;padding:7px 10px;font-size:18px;font-weight:650}
+#manual-edit input:focus-visible,#manual-edit select:focus-visible{outline:2px solid #75a6fa}
+.manual-extra{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+#manual-edit .manual-note{font-size:12px;line-height:1.4;color:#c3c9d2;margin:12px 0}
+#manual-edit #manual-error{padding:10px;background:#5e2229;color:#fff;border-radius:8px;font-size:13px;font-weight:650;scroll-margin-bottom:80px}
+#manual-edit [hidden]{display:none!important}
+.manual-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:sticky;bottom:-1px;background:#16191e;padding:8px 0;z-index:1;box-shadow:0 -7px 12px #16191edc}
+.manual-buttons button,#manual-restore{min-height:44px;border:1px solid #646a74;border-radius:10px;background:#30343c;color:white;padding:8px;font-size:14px;font-weight:700}
+.manual-buttons .manual-save{background:#275fbd;border-color:#619bff}
+#manual-restore{margin-top:11px;width:100%;background:transparent;color:#ccc;font-size:12px}
+@media(max-width:550px){.manual-extra{grid-template-columns:repeat(2,minmax(0,1fr))}.manual-team{padding:7px}.manual-teams{gap:6px}#manual-edit{padding:12px}}
 </style>
 </head>
 <body>
@@ -381,12 +408,20 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
 </main>
 <div id="status" aria-live="polite"></div>
 <div id="pad-indicator" data-state="offline" aria-live="polite">SN30: desconectado · OFF</div>
-<div id="pad-target" data-team="red" aria-live="polite">SELECCIONADO: ROJO</div>
+<!-- Alerta permanente mientras el mando no está disponible. No bloquea el tacto. -->
+<div id="pad-connection-alert" data-alert="offline" role="alert" aria-live="assertive">
+  <div class="pad-alert-panel">
+    <div id="pad-alert-icon" aria-hidden="true">!</div>
+    <div id="pad-alert-title">CONTROL
+DESCONECTADO</div>
+    <div id="pad-alert-detail">SN30 SIN CONEXIÓN</div>
+  </div>
+</div>
 <dialog id="modal" aria-label="Controles del marcador">
  <div class="menu-shell">
   <div class="menu-intro">
    <h2>Controles del marcador</h2>
-   <p>Toca el puntaje para sumar. Mantén pulsado el puntaje rojo o azul para quitar su último punto. Para abrir este menú, mantén pulsada la hora. Toca la pelota para indicar quién saca.</p>
+   <p>Toca el puntaje para sumar. Mantén pulsado el puntaje rojo o azul para corregir el último punto si fue de ese equipo. Para abrir este menú, mantén pulsada la hora. Toca la pelota para indicar quién saca.</p>
    <div class="hint">Teclado: <strong>1</strong> suma al rojo, <strong>2</strong> al azul, <strong>Q</strong> marca saque rojo, <strong>W</strong> marca saque azul, <strong>Z</strong> deshace, <strong>M</strong> abre el menú.</div>
    <div class="style-setting" aria-label="Estilo de números">
     <div class="style-heading">Estilo de números</div>
@@ -410,7 +445,7 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
    <section class="pad-section" aria-label="Control Bluetooth 8BitDo SN30">
      <h3>Control 8BitDo SN30</h3>
      <p id="pad-status">SN30: esperando conexión desde Ajustes de Android</p>
-     <p id="pad-team-status">Equipo seleccionado: ROJO</p>
+     <p id="pad-team-status">Rojo: X sumar / B restar · Azul: A sumar / Y restar</p>
      <p id="pad-last">Último botón: ninguno</p>
      <div class="actions">
        <button type="button" id="pad-armed-toggle" aria-pressed="false">Activar SN30</button>
@@ -418,17 +453,19 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
      </div>
      <p>Botones asignados (toca una acción y después pulsa su botón en el SN30):</p>
      <div class="pad-mapping">
-       <button type="button" id="pad-map-add">Sumar seleccionado: X</button>
-       <button type="button" id="pad-map-subtract">Restar seleccionado: B</button>
-       <button type="button" id="pad-map-lock">Bloquear: Y</button>
-       <button type="button" id="pad-map-select">Cambiar equipo: SELECT</button>
+       <button type="button" id="pad-map-addRed">Sumar ROJO: X</button>
+       <button type="button" id="pad-map-subtractRed">Restar ROJO: B</button>
+       <button type="button" id="pad-map-addBlue">Sumar AZUL: A</button>
+       <button type="button" id="pad-map-subtractBlue">Restar AZUL: Y</button>
+       <button type="button" id="pad-map-lock">Bloquear/desbloquear: SELECT</button>
      </div>
-     <p id="pad-help">SELECT cambia el equipo seleccionado (ROJO/AZUL), sin alterar el saque. X suma un punto al seleccionado; B descuenta el último punto anotado de ese equipo (usando el historial); Y bloquea/desbloquea. El botón A queda libre. Al abrir la app el SN30 comienza desactivado. Empareja desde Ajustes de Android &gt; Bluetooth. Puedes reasignar los botones desde este menú.</p>
+     <p id="pad-help">X suma ROJO, B corrige si el último punto fue del ROJO; A suma AZUL, Y corrige si el último punto fue del AZUL. SELECT bloquea/desbloquea el control. No hay selección de equipo. Restar solo deshace el último punto si fue del equipo correspondiente. Para cambios mayores, usa Editar resultado manualmente. Al abrir la app el SN30 comienza desactivado: actívalo desde este menú. Si pierde conexión, se mostrará una alerta grande y se desactivará por seguridad; al reconectar, reactívalo desde aquí. Empareja desde Ajustes de Android &gt; Bluetooth. Puedes reasignar los botones aquí.</p>
    </section>
    <div class="actions">
     <button id="add-red">+ Punto rojo</button><button id="add-blue">+ Punto azul</button>
-    <button id="undo">↶ Deshacer punto</button><button id="demo">Cargar ejemplo</button>
-    <button id="reset">Nuevo partido</button><button id="fullscreen" class="primary">Pantalla completa</button>
+    <button id="undo">↶ Deshacer punto</button><button id="manual-open" class="primary">Editar resultado manualmente</button>
+    <button id="demo">Cargar ejemplo</button><button id="reset">Nuevo partido</button>
+    <button id="fullscreen">Pantalla completa</button>
     <button id="demo-tiebreak">Probar tie-break 6–6</button>
    </div>
    <div id="rules-pill">Modo: <strong>punto de oro</strong> · sin ventaja</div>
@@ -444,6 +481,42 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
   <button id="reset-cancel">Cancelar</button>
   <button id="reset-accept" class="primary">Iniciar nuevo</button>
  </div>
+</dialog>
+
+<dialog id="manual-edit" aria-label="Editar resultado manualmente">
+ <h2>Editar resultado manualmente</h2>
+ <p class="manual-lead">Ajusta los valores reales del partido. Al guardar, estos reemplazan el marcador y el historial anterior se reinicia.</p>
+ <form id="manual-form" novalidate>
+  <div class="manual-switch"><label><input id="manual-tiebreak" type="checkbox"> Estamos en tie-break (juegos 6–6)</label></div>
+  <div class="manual-teams">
+   <fieldset class="manual-team manual-red">
+    <legend>Equipo ROJO</legend>
+    <label class="manual-regular-point">Puntos<select id="manual-red-point"><option value="0">0</option><option value="1">15</option><option value="2">30</option><option value="3">40</option></select></label>
+    <label class="manual-tb-point" hidden>Puntos tie-break<input id="manual-red-tb" type="number" min="0" max="99" step="1" inputmode="numeric" value="0"></label>
+    <label>Juegos<input id="manual-red-games" type="number" min="0" max="7" step="1" inputmode="numeric" required></label>
+    <label>Sets<input id="manual-red-sets" type="number" min="0" max="2" step="1" inputmode="numeric" required></label>
+   </fieldset>
+   <fieldset class="manual-team manual-blue">
+    <legend>Equipo AZUL</legend>
+    <label class="manual-regular-point">Puntos<select id="manual-blue-point"><option value="0">0</option><option value="1">15</option><option value="2">30</option><option value="3">40</option></select></label>
+    <label class="manual-tb-point" hidden>Puntos tie-break<input id="manual-blue-tb" type="number" min="0" max="99" step="1" inputmode="numeric" value="0"></label>
+    <label>Juegos<input id="manual-blue-games" type="number" min="0" max="7" step="1" inputmode="numeric" required></label>
+    <label>Sets<input id="manual-blue-sets" type="number" min="0" max="2" step="1" inputmode="numeric" required></label>
+   </fieldset>
+  </div>
+  <div class="manual-extra">
+   <label>Saque actual<select id="manual-server"><option value="0">Rojo</option><option value="1">Azul</option></select></label>
+   <label>Tiempo transcurrido (minutos)<input id="manual-minutes" type="number" min="0" max="9999" step="1" inputmode="numeric" required></label>
+   <label>Segundos<input id="manual-seconds" type="number" min="0" max="59" step="1" inputmode="numeric" required></label>
+  </div>
+  <p class="manual-note">Los juegos son los del <strong>set actual</strong>. Al indicar 2 sets ganados, el partido se considera terminado. El tie-break requiere 6–6 en juegos.</p>
+  <p id="manual-error" role="alert" hidden></p>
+  <div class="manual-buttons">
+   <button type="button" id="manual-cancel">Cancelar</button>
+   <button type="submit" class="manual-save">Revisar cambios</button>
+  </div>
+  <button type="button" id="manual-restore" hidden>Restaurar resultado anterior a la última corrección manual</button>
+ </form>
 </dialog>
 <script>
 'use strict';
@@ -579,22 +652,19 @@ function notice(message){
  const n=el('status');n.textContent=message;n.classList.add('visible');
  clearTimeout(statusTimer);statusTimer=setTimeout(()=>n.classList.remove('visible'),2400);
 }
-// Control gamepad HID SN30. Emparejamiento en Ajustes de Android.
-// No requiere permisos de Bluetooth ni root; usa los eventos HID estándar.
-// Nueva clave: no reutilizar mapeos de v2.7 porque X/B cambiaron de función.
-const PAD_MAPPING_KEY='padel_sn30_mapping_v3';
-const PAD_ACTIONS=['add','subtract','lock','select'];
-const PAD_DEFAULT_MAP={add:99,subtract:97,lock:100,select:109};
-const PAD_ACTION_LABEL={add:'Sumar seleccionado',subtract:'Restar seleccionado',lock:'Bloquear/desbloquear',select:'Cambiar equipo'};
+// Control gamepad HID SN30. Cada equipo tiene botones fijos: no se selecciona.
+// Emparejamiento en Ajustes de Android, sin permisos Bluetooth ni root.
+// Usar clave nueva para ignorar asignaciones anteriores de SELECT/X/B/Y.
+const PAD_MAPPING_KEY='padel_sn30_mapping_v4';
+const PAD_ACTIONS=['addRed','subtractRed','addBlue','subtractBlue','lock'];
+const PAD_DEFAULT_MAP={addRed:99,subtractRed:97,addBlue:96,subtractBlue:100,lock:109};
+const PAD_ACTION_LABEL={addRed:'Sumar ROJO',subtractRed:'Restar ROJO',addBlue:'Sumar AZUL',subtractBlue:'Restar AZUL',lock:'Bloquear/desbloquear'};
 let padMap={...PAD_DEFAULT_MAP};
 let padConnected=false;
 let padDeviceCount=0;
 let padArmed=false;
 let padLocked=false;
 let padLearning=null;
-// Equipo objetivo del mando: 0 rojo y 1 azul. Independiente del saque s.server.
-// Por seguridad se inicia siempre seleccionando ROJO al abrir la app.
-let padSelectedTeam=0;
 try{
  const saved=JSON.parse(localStorage.getItem(PAD_MAPPING_KEY)||'null');
  if(saved && PAD_ACTIONS.every(a=>Number.isInteger(saved[a]) && saved[a]>=0 && saved[a]<=300)
@@ -607,16 +677,20 @@ function padKeyLabel(code){
  return (defaults[code]||'KEYCODE '+code)+' ['+code+']';
 }
 function padUpdateUi(){
- const selectedName=padSelectedTeam===0?'ROJO':'AZUL';
- const target=el('pad-target');
- target.textContent='SELECCIONADO: '+selectedName;
- target.dataset.team=padSelectedTeam===0?'red':'blue';
- document.querySelector('.team.red').classList.toggle('pad-selected',padSelectedTeam===0);
- document.querySelector('.team.blue').classList.toggle('pad-selected',padSelectedTeam===1);
- el('pad-team-status').textContent='Equipo seleccionado: '+selectedName+' · X: sumar · B: restar';
  const info=el('pad-indicator');
  const state=!padConnected?'offline':!padArmed?'ready':padLocked?'locked':'armed';
  info.dataset.state=state;
+ // El mensaje gigante solo desaparece cuando el SN30 esta conectado,
+ // habilitado y desbloqueado. No confundir 'conectado' con 'operativo'.
+ const alert=el('pad-connection-alert');
+ alert.dataset.alert=state;
+ alert.hidden=state==='armed';
+ const titles={offline:'CONTROL\nDESCONECTADO',ready:'CONTROL\nDESACTIVADO',locked:'CONTROL\nBLOQUEADO'};
+ const details={offline:'SN30 SIN CONEXIÓN',ready:'ACTIVAR SN30 EN EL MENÚ',locked:'PULSA SELECT PARA DESBLOQUEAR'};
+ if(state!=='armed'){
+  el('pad-alert-title').textContent=titles[state];
+  el('pad-alert-detail').textContent=details[state];
+ }
  info.textContent='SN30: '+(!padConnected?'desconectado':padDeviceCount+' conectado'+(padDeviceCount>1?'s':''))+' · '+(!padArmed?'OFF':padLocked?'BLOQUEADO':'ON');
  el('pad-armed-toggle').textContent=padArmed?'Desactivar SN30':'Activar SN30';
  el('pad-armed-toggle').setAttribute('aria-pressed',String(padArmed));
@@ -653,7 +727,7 @@ window.padelGamepadEvent=function(code,keyName,deviceId){
   notice(PAD_ACTION_LABEL[assigned]+' asignado a '+padKeyLabel(code));
   return;
  }
- if(!padArmed || !padConnected || el('modal').open || el('reset-confirm').open)return;
+ if(!padArmed || !padConnected || el('modal').open || el('reset-confirm').open || el('manual-edit').open)return;
  const action=PAD_ACTIONS.find(a=>padMap[a]===code);
  if(!action)return;
  if(action==='lock'){
@@ -663,18 +737,14 @@ window.padelGamepadEvent=function(code,keyName,deviceId){
   return;
  }
  if(padLocked)return;
- if(action==='select'){
-  padSelectedTeam=1-padSelectedTeam;
-  padUpdateUi();
-  notice('SN30: EQUIPO '+(padSelectedTeam===0?'ROJO':'AZUL')+' seleccionado');
-  return;
- }
- if(action==='add'){
-  if(!s.ended){addPoint(padSelectedTeam);notice('SN30: +1 '+(padSelectedTeam===0?'ROJO':'AZUL'))}
- }else if(action==='subtract'){
-  // Resta del equipo seleccionado: deshace su punto más reciente y reconstruye
-  // cronológicamente los puntos posteriores del rival, incluidos juegos y sets.
-  undoTeam(padSelectedTeam);
+ if(action==='addRed'){
+  if(!s.ended){addPoint(0);notice('SN30: +1 ROJO')}
+ }else if(action==='subtractRed'){
+  undoTeam(0);
+ }else if(action==='addBlue'){
+  if(!s.ended){addPoint(1);notice('SN30: +1 AZUL')}
+ }else if(action==='subtractBlue'){
+  undoTeam(1);
  }
 };
 el('pad-armed-toggle').onclick=()=>{
@@ -780,26 +850,131 @@ function undo(){
  notice('Último punto deshecho');
 }
 function undoTeam(team){
- if(!s.history.length){notice('No hay puntos para restar');return}
- const history=s.history;
- const scorers=history.map((before,i)=>scorerOf(before,i+1<history.length?history[i+1]:s));
- const index=scorers.lastIndexOf(team);
- if(index<0){notice('No hay puntos del '+(team===0?'rojo':'azul')+' para restar');return}
- // No arriesgar el resultado si existen eventos antiguos sin poder identificarlos.
- const remaining=scorers.slice(index+1);
- if(remaining.some(x=>x===null)){
-  notice('No es posible corregir ese punto del historial anterior');return;
+ if(!s.history.length){notice('No hay puntos recientes para restar');return}
+ // Solo puede deshacerse el ultimo punto real del partido. No buscar
+ // jugadas anteriores de ese color: podria cambiar un juego/set cerrado.
+ const last=s.history[s.history.length-1];
+ const scorer=scorerOf(last,s);
+ if(scorer!==team){
+  notice(scorer===null?'Ultimo punto no identificable: usa edicion manual':'El ultimo punto fue del '+(scorer===0?'rojo':'azul')+'; no se modifico');
+  return;
  }
- const base=withoutScorer(history[index]);
- const past=deepCopy(history.slice(0,index));
- s={...deepCopy(base),history:past};
- replaying=true;
- try{
-  for(const scorer of remaining)addPoint(scorer,false);
- }finally{replaying=false}
- update();
- notice('Punto '+(team===0?'rojo':'azul')+' restado');
+ undo();
+ notice('Ultimo punto del '+(team===0?'rojo':'azul')+' corregido');
 }
+// Edicion manual: el estado editado pasa a ser un nuevo punto de partida.
+// Se conserva una sola copia del estado anterior, por si se necesita revertir.
+const MANUAL_BACKUP_KEY='padel_sn30_manual_backup_v1';
+let manualCandidate=null;
+let manualBackup=null;
+try{
+ const backup=JSON.parse(localStorage.getItem(MANUAL_BACKUP_KEY)||'null');
+ if(backup && backup.points && backup.games && backup.sets)manualBackup=backup;
+}catch(e){}
+function manualBackupAvailability(){
+ el('manual-restore').hidden=!manualBackup;
+}
+function fillManualEditor(){
+ const t=!!s.tiebreak;
+ el('manual-tiebreak').checked=t;
+ toggleManualPoints();
+ for(const [team,name] of [[0,'red'],[1,'blue']]){
+  el('manual-'+name+'-point').value=String(Math.min(3,Math.max(0,s.points[team])));
+  el('manual-'+name+'-tb').value=String(s.points[team]);
+  el('manual-'+name+'-games').value=String(s.games[team]);
+  el('manual-'+name+'-sets').value=String(s.sets[team]);
+ }
+ el('manual-server').value=String(s.server);
+ const seconds=Math.max(0,Math.floor((Date.now()-s.startTs)/1000));
+ el('manual-minutes').value=String(Math.floor(seconds/60));
+ el('manual-seconds').value=String(seconds%60);
+ el('manual-error').hidden=true;
+ manualBackupAvailability();
+}
+function toggleManualPoints(){
+ const tb=el('manual-tiebreak').checked;
+ document.querySelectorAll('.manual-regular-point').forEach(n=>n.hidden=tb);
+ document.querySelectorAll('.manual-tb-point').forEach(n=>n.hidden=!tb);
+}
+function openManualEditor(){
+ fillManualEditor();
+ if(el('modal').open)el('modal').close();
+ if(!el('manual-edit').open)el('manual-edit').showModal();
+}
+function manualError(message){
+ const n=el('manual-error');n.textContent=message;n.hidden=false;
+ n.scrollIntoView({block:'nearest'});
+}
+function intManual(id,min,max){
+ const raw=el(id).value.trim();
+ if(!/^[0-9]+$/.test(raw))throw new Error('Completa todos los valores con numeros enteros.');
+ const n=Number(raw);
+ if(!Number.isSafeInteger(n)||n<min||n>max)throw new Error('Valor fuera de rango en '+id.replace('manual-','').replaceAll('-',' ')+': debe ser de '+min+' a '+max+'.');
+ return n;
+}
+function createManualCandidate(){
+ const tb=el('manual-tiebreak').checked;
+ const points=tb?[intManual('manual-red-tb',0,99),intManual('manual-blue-tb',0,99)]:[
+  intManual('manual-red-point',0,3),intManual('manual-blue-point',0,3)];
+ const games=[intManual('manual-red-games',0,7),intManual('manual-blue-games',0,7)];
+ const sets=[intManual('manual-red-sets',0,2),intManual('manual-blue-sets',0,2)];
+ const server=intManual('manual-server',0,1);
+ const mins=intManual('manual-minutes',0,9999),secs=intManual('manual-seconds',0,59);
+ if(sets[0]===2&&sets[1]===2)throw new Error('Los dos equipos no pueden tener 2 sets ganados en un partido al mejor de 3.');
+ if(tb && (games[0]!==6||games[1]!==6))throw new Error('Para tie-break, ambos equipos deben tener 6 juegos.');
+ if(tb && Math.max(...points)>=7 && Math.abs(points[0]-points[1])>=2)
+  throw new Error('Ese tie-break ya estaria terminado. Ajusta el set ganado y reinicia los puntos.');
+ // Una edicion no debe reactivar una secuencia anterior de puntos.
+ const played=points[0]+points[1];
+ return {...deepCopy(s),points,games,sets,tiebreak:tb,
+  tiebreakStarter:tb?starterFromCurrentServer(played,server):null,
+  server,ended:sets.some(n=>n>=2),history:[],
+  startTs:Date.now()-(mins*60+secs)*1000};
+}
+function manualSummary(v){
+ const pt=v.tiebreak?v.points.join('–'):v.points.map(i=>['0','15','30','40'][i]).join('–');
+ return 'Puntos '+pt+'; juegos '+v.games.join('–')+'; sets '+v.sets.join('–')+
+  '; saca '+(v.server===0?'rojo':'azul')+'; '+(v.tiebreak?'tie-break':'juego normal')+
+  (v.ended?'; partido terminado':'')+'. Se borrara el historial de puntos anterior.';
+}
+function saveManualCandidate(){
+ if(!manualCandidate)return;
+ manualBackup=deepCopy(s);
+ try{localStorage.setItem(MANUAL_BACKUP_KEY,JSON.stringify(manualBackup))}catch(e){}
+ s=manualCandidate;
+ manualCandidate=null;
+ update();
+ if(el('reset-confirm').open)el('reset-confirm').close();
+ notice('Resultado manual guardado; historial reiniciado');
+}
+function restoreManualBackup(){
+ if(!manualBackup)return;
+ s={...blank(),...deepCopy(manualBackup)};
+ manualBackup=null;
+ try{localStorage.removeItem(MANUAL_BACKUP_KEY)}catch(e){}
+ update();
+ if(el('reset-confirm').open)el('reset-confirm').close();
+ notice('Se restauro el resultado anterior a la correccion');
+}
+function clearManualBackup(){
+ manualBackup=null;manualCandidate=null;
+ try{localStorage.removeItem(MANUAL_BACKUP_KEY)}catch(e){}
+}
+el('manual-tiebreak').onchange=toggleManualPoints;
+el('manual-open').onclick=openManualEditor;
+el('manual-cancel').onclick=()=>{el('manual-edit').close();openMenu()};
+el('manual-form').addEventListener('submit',event=>{
+ event.preventDefault();
+ el('manual-error').hidden=true;
+ try{manualCandidate=createManualCandidate()}catch(e){manualError(e.message);return}
+ el('manual-edit').close();
+ askReplacement('manual');
+});
+el('manual-restore').onclick=()=>{
+ if(!manualBackup)return;
+ el('manual-edit').close();
+ askReplacement('rollback');
+};
 // Confirmaciones HTML compatibles con WebView; evitar confirm() de JavaScript.
 let pendingMode=null;
 function askReplacement(mode){
@@ -807,29 +982,38 @@ function askReplacement(mode){
  const data={
   reset:['¿Iniciar un nuevo partido?','Se reiniciarán los puntos, juegos, sets, saque, tiempo y el historial de deshacer.','Iniciar nuevo'],
   demo:['¿Cargar partido de ejemplo?','Reemplazará el marcador del partido actual.','Cargar ejemplo'],
-  tiebreak:['¿Cargar tie-break de prueba?','Reemplazará el marcador del partido actual por un tie-break 6–6.','Probar tie-break']
+  tiebreak:['¿Cargar tie-break de prueba?','Reemplazará el marcador del partido actual por un tie-break 6–6.','Probar tie-break'],
+  manual:['¿Sobreescribir resultado?',manualSummary(manualCandidate),'Confirmar corrección'],
+  rollback:['¿Restaurar el resultado previo?','Se volverá al estado anterior a la última corrección manual. Se perderán los puntos y ajustes registrados después.','Restaurar anterior']
  }[mode];
  if(!data)return;
  el('reset-confirm').querySelector('h2').textContent=data[0];
  el('reset-confirm').querySelector('p').textContent=data[1];
  el('reset-accept').textContent=data[2];
- el('modal').close();
+ if(el('modal').open)el('modal').close();
+ if(el('manual-edit').open)el('manual-edit').close();
  el('reset-confirm').showModal();
 }
 function askReset(){askReplacement('reset')}
 function reset(){
+ clearManualBackup();
  s=blank(); // Estado desde cero: puntos, juegos, sets, saque, tiempo, tie-break, historial y finalización.
  update(); // Incluye persistencia inmediata en localStorage.
  el('reset-confirm').close();
  notice('Nuevo partido iniciado');
 }
 function cancelReset(){
+ const mode=pendingMode;
  pendingMode=null;
  el('reset-confirm').close();
- openMenu();
+ if(mode==='manual'||mode==='rollback'){
+  // No perder los valores ingresados durante una confirmación cancelada.
+  if(!el('manual-edit').open)el('manual-edit').showModal();
+ }else openMenu();
 }
-function demo(){s=blank();s.points=[3,3];s.games=[4,3];s.sets=[1,0];s.server=1;update();if(el('modal').open)el('modal').close();notice('Ejemplo cargado')}
+function demo(){clearManualBackup();s=blank();s.points=[3,3];s.games=[4,3];s.sets=[1,0];s.server=1;update();if(el('modal').open)el('modal').close();notice('Ejemplo cargado')}
 function demoTiebreak(){
+ clearManualBackup();
  s=blank();s.games=[6,6];s.tiebreak=true;s.tiebreakStarter=0;s.server=0;
  update();if(el('modal').open)el('modal').close();notice('Tie-break: saca rojo el primer punto');
 }
@@ -839,6 +1023,8 @@ function confirmReplacement(){
  if(mode==='reset')reset();
  else if(mode==='demo'){el('reset-confirm').close();demo()}
  else if(mode==='tiebreak'){el('reset-confirm').close();demoTiebreak()}
+ else if(mode==='manual')saveManualCandidate();
+ else if(mode==='rollback')restoreManualBackup();
 }
 function openMenu(){if(!el('modal').open)el('modal').showModal()}
 el('modal').addEventListener('close',()=>{if(padLearning){padLearning=null;padUpdateUi();}});
@@ -933,7 +1119,7 @@ el('close').onclick=()=>el('modal').close();
 })();
 window.addEventListener('keydown',(e)=>{
  // No se puede cambiar el marcador mientras se confirma el inicio de un partido.
- if(el('reset-confirm').open)return;
+ if(el('reset-confirm').open||el('manual-edit').open)return;
  if(el('modal').open){if(e.key==='Escape')el('modal').close();return}
  if(e.ctrlKey||e.metaKey||e.altKey)return;
  const k=e.key.toLowerCase();

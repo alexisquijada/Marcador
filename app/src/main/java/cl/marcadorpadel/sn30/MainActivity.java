@@ -20,7 +20,7 @@ import org.json.JSONObject;
 import java.util.Locale;
 
 /**
- * Marcador Pádel v2.8 — únicamente mando 8BitDo SN30 HID.
+ * Marcador Pádel v3.1 — únicamente mando 8BitDo SN30 HID.
  * El emparejamiento Bluetooth lo realiza Android desde Ajustes.
  * No hace escaneo BLE, no necesita permisos de Bluetooth ni root.
  */
@@ -32,6 +32,17 @@ public class MainActivity extends Activity {
     private InputManager inputManager;
     private boolean webReady = false;
     private boolean destroyed = false;
+
+    // Además del listener, comprobar cada 2 segundos: algunos mandos Bluetooth
+    // retrasan la notificacion de alta/baja cuando Android entra en reposo.
+    // No considerar falta de pulsaciones como desconexion (pueden pasar minutos).
+    private final Runnable connectionCheck = new Runnable() {
+        @Override public void run() {
+            if (destroyed) return;
+            refreshControllerStatus();
+            handler.postDelayed(this, 2000L);
+        }
+    };
 
     private final InputManager.InputDeviceListener deviceListener = new InputManager.InputDeviceListener() {
         @Override public void onInputDeviceAdded(int deviceId) { handler.post(() -> refreshControllerStatus()); }
@@ -54,6 +65,7 @@ public class MainActivity extends Activity {
 
         inputManager = (InputManager)getSystemService(Context.INPUT_SERVICE);
         if (inputManager != null) inputManager.registerInputDeviceListener(deviceListener, handler);
+        handler.postDelayed(connectionCheck, 2000L);
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.BLACK);
@@ -71,7 +83,7 @@ public class MainActivity extends Activity {
         });
         setContentView(webView);
         webView.loadUrl("file:///android_asset/index.html");
-        Log.i(TAG, "Marcador v2.8 iniciado. Entrada por 8BitDo SN30 HID.");
+        Log.i(TAG, "Marcador v3.1 iniciado. Entrada por 8BitDo SN30 HID.");
     }
 
     /**

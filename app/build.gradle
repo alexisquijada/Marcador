@@ -8,8 +8,8 @@ android {
         applicationId 'cl.marcadorpadel.sn30'
         minSdk 23
         targetSdk 29
-        versionCode 28
-        versionName '2.8-SN30-SELECT-RESTA'
+        versionCode 31
+        versionName '3.1-SN30-ALERTA-CONEXION'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

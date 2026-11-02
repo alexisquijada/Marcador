@@ -1,53 +1,63 @@
-# Marcador de Pádel v2.8 — SOLO 8BitDo SN30
+# Marcador de Pádel v3.1 — SN30, alerta grande de conectividad + edición manual
 
-Proyecto **Android Java** para la Nexus 10 con Android 10. Se compila con GitHub Actions, sin Android Studio. El ZIP es **código fuente**, no un APK compilado.
+Código fuente para Nexus 10 Android 10, compilable con GitHub Actions. Sin FitPro ni escaneo BLE. **Este ZIP no es un APK compilado**.
 
-## Controles por defecto
+## 8BitDo SN30
 
 | Botón | Acción |
 | --- | --- |
-| **SELECT** | Cambiar equipo seleccionado (rojo/azul). No cambia el saque. |
-| **X** | **Sumar** un punto al equipo seleccionado. |
-| **B** | **Restar** el último punto registrado del equipo seleccionado. |
-| **Y** | Bloquear/desbloquear las pulsaciones del SN30. |
-| **A** | Sin acción asignada. Disponible para futuras funciones. |
+| X | Sumar rojo |
+| B | Deshacer **solo si el último punto del partido fue rojo** |
+| A | Sumar azul |
+| Y | Deshacer **solo si el último punto del partido fue azul** |
+| SELECT | Bloquear / desbloquear las teclas del mando |
 
-Al cambiar equipo, se ilumina un indicador junto al puntaje elegido y aparece el texto **SELECCIONADO: ROJO/AZUL**. Esto es independiente de la pelota que indica el saque.
+El SN30 comienza desactivado al abrir la app. Mantén pulsada la hora superior izquierda para abrir el menú y pulsa «Activar SN30». Puede reasignarse cada botón desde ese menú. Se conserva la entrada táctil.
 
-### Qué significa restar
+## Alerta de conectividad visible desde lejos
 
-**B corrige el último punto que se registró para el equipo seleccionado** (no necesariamente la última jugada del partido). Se utiliza el historial de puntos del marcador, se retira ese punto y se vuelven a aplicar los puntos posteriores del otro equipo. Esto también puede afectar un juego o set si el punto corregido lo había decidido. Si no hay ningún punto del equipo en el historial, no resta ni altera resultados. No es una resta aritmética de 15 puntos ni permite puntuaciones negativas. El historial guarda hasta 200 jugadas; al retroceder más allá de ellas no hay garantía de poder restar puntos anteriores.
+- **Roja, pantalla completa**: **CONTROL DESCONECTADO** cuando Android no detecta el 8BitDo SN30, incluido el inicio sin mando. Bordes rojos y aviso central grande, no solo letras pequeñas.
+- **Amarilla**: **CONTROL DESACTIVADO** cuando el SN30 está conectado pero no habilitado en el menú. La app desactiva el control al perder conexión; al reconectar, el usuario debe activarlo nuevamente por seguridad.
+- **Amarilla**: **CONTROL BLOQUEADO** cuando SELECT ha bloqueado los botones. SELECT permite desbloquear.
+- **Normal**: cuando está conectado, activado y desbloqueado no hay aviso grande; permanecen los puntos visibles sin interferencia.
+- Se utilizan `InputManager.InputDeviceListener` y una comprobación cada 2 segundos de los dispositivos de entrada que Android reporta. **No se usa un tiempo sin pulsaciones** para concluir que está desconectado (puede transcurrir mucho tiempo entre puntos).
+- El mensaje es visual: no bloquea las pulsaciones táctiles; el marcador y su puntuación se conservan al desconectar.
+- **Límite técnico**: solo puede detectar una desconexión cuando Android retira el dispositivo de entrada. La latencia real de detección/reconexión debe validarse en la Nexus 10.
 
-Se conserva el botón táctil **Deshacer punto** del menú, para deshacer la última jugada sin importar el equipo. También se mantiene la pulsación prolongada sobre cada marcador para restar al equipo correspondiente.
+## Corrección manual completa
 
-### Seguridad y preferencias
+Mantén pulsada la hora → menú → **Editar resultado manualmente**.
 
-- La aplicación **solo** acepta eventos HID (`KeyEvent`) provenientes de un control cuyo nombre contenga `8BitDo` y `SN30`. Sin FitPro, sin BLE propietario, sin permisos Bluetooth en la APK.
-- Para comenzar, empareja desde Ajustes de Android → Bluetooth y activa el control desde el menú del marcador (mantén pulsada la **hora**). Cada inicio de app deja el mando desactivado por seguridad.
-- **Y** alterna bloqueado/desbloqueado mientras el control está activo. Bloqueado ignora SELECT, X y B.
-- Las cuatro acciones pueden reasignarse desde el menú. La versión 2.8 usa una clave nueva para sus asignaciones, así no hereda una asignación de v2.7 que haría que X/B ejecuten otras funciones.
-- El marcador sigue guardando el partido localmente en Android.
-- `KeyEvent.ACTION_DOWN` sin repeticiones evita sumar/restar repetidamente si dejas el botón apretado.
+Desde ahí se pueden establecer, para cada equipo:
+- Puntos normales (0, 15, 30, 40) o puntos numéricos en tie-break.
+- Juegos del set en curso (0 a 7).
+- Sets ganados (0 a 2).
+- Quién saca, si hay tie-break y tiempo transcurrido.
 
-## Compilar con GitHub Actions
+Se validan enteros, tie-break solo con 6–6 en juegos y que no haya dos ganadores del partido. Con dos sets ganados, el partido se declara terminado. La edición **no adjudica automáticamente juegos ni sets al guardar**: se respetan los valores introducidos. Para un set ya terminado, ingresa los juegos del **nuevo set**, no el resultado histórico del set anterior.
 
-1. Descomprime el ZIP y copia **todo su contenido** a la raíz de tu repositorio GitHub `Marcador` (rama `main`). Actualiza o sustituye los archivos de versiones anteriores.
-2. GitHub → **Actions → Compilar Marcador Padel SN30 → Run workflow** (o haz push a `main`).
-3. Descarga el artefacto **MarcadorPadel-SN30-SELECT-RESTA-v2-8**. Dentro viene `app-debug.apk`.
-4. En PowerShell, desde la carpeta donde descargaste el APK:
+Al pulsar **Revisar cambios**, aparece una confirmación con el resultado antes de aplicarlo. Puedes cancelar sin modificar nada. Al confirmar:
+- La nueva puntuación se guarda en localStorage (clave `padel_scoreboard_v08`, compatible con versiones anteriores).
+- Se borra el historial de jugadas anterior: las próximas correcciones solo se refieren a puntos registrados tras la edición.
+- Se conserva temporalmente un respaldo del estado anterior en localStorage (`padel_sn30_manual_backup_v1`). Desde el mismo editor se ofrece **Restaurar resultado anterior**, con confirmación que advierte que se perderán los puntos jugados después.
+- El respaldo se elimina al iniciar partido nuevo o cargar un ejemplo.
 
-```powershell
-cd C:\platform-tools
-.\adb devices -l
-.\adb install -r .\app-debug.apk
-```
+**Importante:** un botón B/Y no reduce 15 puntos aritméticamente. Solo deshace el último punto del partido si lo ganó el equipo correspondiente. Esto evita borrar puntos de otros juegos o sets al equivocarse de tecla.
 
-El `applicationId` es `cl.marcadorpadel.sn30`, igual que en v2.7. Si cambió la firma de compilación, `INSTALL_FAILED_UPDATE_INCOMPATIBLE` puede requerir desinstalar; haz respaldo de los datos antes de hacerlo porque los partidos se guardan localmente.
+## Subida y compilación
 
-## Verificación pendiente en hardware
+1. Extrae el ZIP y reemplaza con su contenido los archivos del proyecto en la **raíz** de `alexisquijada/Marcador`, rama `main` (mantén el historial `.git` intacto si usas GitHub Desktop).
+2. Confirma los cambios y haz `Push origin`; GitHub Actions ejecuta `Compilar Marcador Padel SN30`.
+3. Descarga el artefacto `MarcadorPadel-SN30-ALERTA-CONEXION-v3-1` que incluye `app-debug.apk`.
+4. En PowerShell desde `C:\platform-tools`:
 
-En tu Nexus 10 ya se comprobó el emparejamiento y la llegada de señales distintas del 8BitDo SN30 mediante `adb shell getevent -lt`. Aún falta validar la traducción real de SELECT/X/B/Y a `KeyEvent` de Android y probar esta v2.8 instalada. Para comprobarlo: abre el menú → **Último botón** o usa `adb logcat -s PadelSN30:D`. Si alguna tecla aparece distinta, reasígnala en el menú.
+   ```powershell
+   .\adb devices -l
+   .\adb install -r .\app-debug.apk
+   ```
 
-## Estado de compilación
+Se mantiene `applicationId cl.marcadorpadel.sn30`; una instalación sobre la versión anterior requiere la misma firma debug.
 
-El ZIP incluye workflow de compilación con Java 17, SDK 35, Gradle 8.9 y Android Gradle Plugin 8.7.3. El APK final se obtiene desde GitHub Actions.
+## Validación pendiente
+
+Las pruebas de la lógica y del editor se ejecutaron en Chromium local. Quedan pendientes la compilación en GitHub Actions y la validación táctil real en Nexus 10 con SN30.
