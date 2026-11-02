@@ -1,3 +1,7 @@
+# Versión 2 - Música
+
+Ver **PRUEBA_MUSICA.md** para las funciones nuevas y la prueba de los tres botones.
+
 # FitPro BLE - Receptor de diagnóstico para Nexus 10
 
 **Estado: proyecto fuente para Android; no incluye una APK ya compilada.**

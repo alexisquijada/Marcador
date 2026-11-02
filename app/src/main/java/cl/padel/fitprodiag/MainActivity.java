@@ -52,7 +52,8 @@ import java.util.UUID;
 /**
  * Diagnóstico BLE para el smartwatch FitPro en Nexus 10 / Android 10.
  * Sin dependencias ni interacción con el marcador de pádel.
- * El número filtrado es un conteo técnico; NO equivale a pulsaciones físicas verificadas.
+ * Los contadores de cámara y música son eventos BLE brutos o filtrados,
+ * no equivalen necesariamente a pulsaciones físicas verificadas.
  */
 @SuppressWarnings("deprecation")
 public class MainActivity extends Activity {
@@ -66,6 +67,11 @@ public class MainActivity extends Activity {
     private static final byte[] CAMERA_OFF = hex("CD 00 06 12 01 0C 00 01 00");
     private static final byte[] CAMERA_EVENT = hex("CD 00 05 1C 01 02 00 00");
     private static final byte[] CAMERA_ACK = hex("DC 00 05 1C 01 00 08 01");
+    // Valores confirmados en la rutina DeviceControlApp(B) de FitPro 2.9.75.
+    // El formato BLE exacto de los eventos de música aún necesita validación en WATCH.
+    private static final int MUSIC_PREVIOUS = 0x0A;
+    private static final int MUSIC_PLAY_PAUSE = 0x0B;
+    private static final int MUSIC_NEXT = 0x0C;
     private static final int[] DEBOUNCE_MS = {500, 1000, 2000, 3500, 5000};
 
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -85,8 +91,10 @@ public class MainActivity extends Activity {
     private int sessionId = 0;
     private long lastAccepted = Long.MIN_VALUE / 2;
     private int notifications = 0, cameraEvents = 0, accepted = 0, others = 0, beforeMode = 0;
+    private int musicPreviousEvents = 0, musicPlayEvents = 0, musicNextEvents = 0;
+    private int unknownDeviceControlEvents = 0;
 
-    private TextView status, counts, logText;
+    private TextView status, counts, lastMusic, logText;
     private Spinner debounceChoice;
     private ScrollView logScroll;
     private Button scanButton, connectButton, enableButton, disableButton, disconnectButton;
@@ -110,9 +118,9 @@ public class MainActivity extends Activity {
         root.setPadding(dp(14), dp(16), dp(14), dp(12));
         root.setBackgroundColor(Color.rgb(11, 17, 26));
 
-        TextView heading = text("FitPro · Diagnóstico BLE", 23, white, true);
+        TextView heading = text("FitPro · Diagnóstico BLE Música", 23, white, true);
         root.addView(heading);
-        TextView warn = text("Receptor independiente. Los eventos filtrados NO son puntos comprobados.", 13, muted, false);
+        TextView warn = text("Prueba de controles de música sin sumar puntos. Los conteos son eventos BLE, no pulsaciones físicas verificadas.", 13, muted, false);
         warn.setPadding(0, dp(7), 0, dp(10));
         root.addView(warn);
 
@@ -121,6 +129,9 @@ public class MainActivity extends Activity {
         counts = text("", 17, white, true);
         counts.setPadding(0, dp(10), 0, dp(8));
         root.addView(counts);
+        lastMusic = text("Último control de música: ninguno", 16, Color.rgb(103, 222, 163), true);
+        lastMusic.setPadding(0, 0, 0, dp(8));
+        root.addView(lastMusic);
 
         LinearLayout controlRow = row();
         scanButton = button("Buscar relojes", controlRow, () -> startSearch());
@@ -128,10 +139,13 @@ public class MainActivity extends Activity {
         root.addView(controlRow);
 
         LinearLayout cameraRow = row();
-        enableButton = button("Activar cámara", cameraRow, () -> sendCamera(true));
-        disableButton = button("Desactivar", cameraRow, () -> sendCamera(false));
+        enableButton = button("Cámara ON", cameraRow, () -> sendCamera(true));
+        disableButton = button("Probar Música", cameraRow, () -> enterMusicTest());
         disconnectButton = button("Salir", cameraRow, () -> disconnect());
         root.addView(cameraRow);
+        TextView musicHelp = text("Para probar Música: pulsa «Probar Música», entra a Música en el reloj y toca anterior, pausa y siguiente. La aplicación NO reproduce música.", 12, muted, false);
+        musicHelp.setPadding(0, dp(6), 0, dp(7));
+        root.addView(musicHelp);
 
         LinearLayout options = row();
         TextView debounceLabel = text("Filtro (ms):", 14, white, false);
@@ -398,26 +412,75 @@ public class MainActivity extends Activity {
     private void processNotification(byte[] message) {
         notifications++;
         boolean camera = same(message, CAMERA_EVENT);
-        log("RX " + asHex(message) + (camera ? "  [CAMERA]" : ""));
+        // El comando 0x1C usa el byte de acción en la posición 5.
+        // Este formato se ha visto para cámara, pero todavía debe comprobarse
+        // empíricamente que WATCH usa el mismo para los eventos de música.
+        boolean deviceControl = isDeviceControl(message);
+        int action = deviceControl ? (message[5] & 0xFF) : -1;
+        String eventName = "";
+        if (camera) eventName = "CAMERA";
+        else if (deviceControl && action == MUSIC_PREVIOUS) eventName = "MUSIC_PREVIOUS";
+        else if (deviceControl && action == MUSIC_PLAY_PAUSE) eventName = "MUSIC_PLAY_PAUSE";
+        else if (deviceControl && action == MUSIC_NEXT) eventName = "MUSIC_NEXT";
+        else if (deviceControl) eventName = "CONTROL_1C_" + String.format(Locale.US, "%02X", action);
+
+        log("RX " + asHex(message) + (eventName.isEmpty() ? "" : "  [" + eventName + "]"));
         if (camera) {
             cameraEvents++;
-            enqueueWrite(CAMERA_ACK); // Confirmar TODOS los eventos, incluso los descartados.
+            // ACK comprobado en las capturas de cámara; no se extrapola a música.
+            enqueueWrite(CAMERA_ACK);
             long now = SystemClock.elapsedRealtime();
             int debounce = DEBOUNCE_MS[debounceChoice.getSelectedItemPosition()];
             if (!cameraRequested) {
                 beforeMode++;
-                log("FILTRO: evento fuera del modo cámara (no contable)");
+                log("FILTRO: evento de cámara fuera del modo cámara (no contable)");
             } else if (now - lastAccepted >= debounce) {
                 lastAccepted = now;
                 accepted++;
-                log("FILTRO: evento aceptado #" + accepted + " (no es un punto confirmado)");
+                log("FILTRO: evento cámara aceptado #" + accepted + " (no es un punto confirmado)");
             } else {
-                log("FILTRO: repetido, ignorado (" + (now - lastAccepted) + " ms)");
+                log("FILTRO: cámara repetida, ignorada (" + (now - lastAccepted) + " ms)");
             }
+        } else if (deviceControl && action == MUSIC_PREVIOUS) {
+            musicPreviousEvents++;
+            lastMusic.setText("Último control: ANTERIOR (#" + musicPreviousEvents + ")");
+            log("MÚSICA: anterior; evento bruto #" + musicPreviousEvents + " (sin filtro ni ACK)");
+        } else if (deviceControl && action == MUSIC_PLAY_PAUSE) {
+            musicPlayEvents++;
+            lastMusic.setText("Último control: PLAY/PAUSA (#" + musicPlayEvents + ")");
+            log("MÚSICA: reproducir/pausar; evento bruto #" + musicPlayEvents + " (sin filtro ni ACK)");
+        } else if (deviceControl && action == MUSIC_NEXT) {
+            musicNextEvents++;
+            lastMusic.setText("Último control: SIGUIENTE (#" + musicNextEvents + ")");
+            log("MÚSICA: siguiente; evento bruto #" + musicNextEvents + " (sin filtro ni ACK)");
         } else {
             others++;
+            if (deviceControl) {
+                unknownDeviceControlEvents++;
+                log("CONTROL 0x1C: acción desconocida 0x" +
+                        String.format(Locale.US, "%02X", action) + " (conservar para revisar)");
+            }
         }
         updateUi();
+    }
+
+    private static boolean isDeviceControl(byte[] message) {
+        return message != null && message.length >= 6 &&
+                (message[0] & 0xFF) == 0xCD &&
+                (message[3] & 0xFF) == 0x1C &&
+                (message[4] & 0xFF) == 0x01;
+    }
+
+    private void enterMusicTest() {
+        if (!ready) {
+            log("Conecta el reloj para probar música.");
+            return;
+        }
+        sendCamera(false);
+        status.setText("Estado: conectado; prueba de música (cámara OFF)");
+        log("--- PRUEBA MÚSICA: cámara OFF, abrir Música en el reloj ---");
+        log("Códigos esperados: 0A anterior, 0B play/pausa, 0C siguiente.");
+        log("Los eventos de música se registran en bruto; sin ACK no verificado.");
     }
 
     private void sendCamera(boolean enable) {
@@ -473,6 +536,11 @@ public class MainActivity extends Activity {
         accepted = 0;
         others = 0;
         beforeMode = 0;
+        musicPreviousEvents = 0;
+        musicPlayEvents = 0;
+        musicNextEvents = 0;
+        unknownDeviceControlEvents = 0;
+        lastMusic.setText("Último control de música: ninguno");
         lastAccepted = Long.MIN_VALUE / 2;
         log("--- CONTADORES REINICIADOS ---");
         updateUi();
@@ -484,7 +552,11 @@ public class MainActivity extends Activity {
                 + "    Cámara: " + cameraEvents
                 + "\nAceptados (filtro): " + accepted
                 + "    Otros: " + others
-                + "    Pre-modo: " + beforeMode);
+                + "    Pre-modo: " + beforeMode
+                + "\nMúsica: anterior=" + musicPreviousEvents
+                + "  pausa=" + musicPlayEvents
+                + "  siguiente=" + musicNextEvents
+                + "\nComandos 0x1C desconocidos: " + unknownDeviceControlEvents);
         if (enableButton != null) enableButton.setEnabled(ready);
         if (disableButton != null) disableButton.setEnabled(ready);
         if (connectButton != null) connectButton.setEnabled(!found.isEmpty());
