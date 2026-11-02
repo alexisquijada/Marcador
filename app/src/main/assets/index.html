@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#000000">
-<title>Marcador de Pádel — 8BitDo SN30 v3.1</title>
+<title>Marcador de Pádel — Controles HID v3.2</title>
 <style>
 :root {
   color-scheme: dark;
@@ -377,6 +377,11 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
 .manual-buttons .manual-save{background:#275fbd;border-color:#619bff}
 #manual-restore{margin-top:11px;width:100%;background:transparent;color:#ccc;font-size:12px}
 @media(max-width:550px){.manual-extra{grid-template-columns:repeat(2,minmax(0,1fr))}.manual-team{padding:7px}.manual-teams{gap:6px}#manual-edit{padding:12px}}
+.brand-home{display:flex;align-items:center;gap:10px;cursor:pointer;width:fit-content;max-width:100%;padding:5px;border-radius:8px}
+.brand-home:focus-visible{outline:2px solid #80b5ff}.brand-home h2{margin:0!important}
+.brand-p{display:grid;place-items:center;width:42px;height:42px;border-radius:10px;background:#294d84;color:white;font-size:28px;font-weight:900;flex-shrink:0}
+.brand-sub{margin:4px 0 10px!important;color:#aab5c5}.new-match-first{width:100%;min-height:48px;background:#295da6!important;border:1px solid #80b5ff!important;color:#fff!important;font-weight:900!important;font-size:18px!important;border-radius:11px}
+.section-heading{margin:8px 0 4px;font-size:15px;color:#dce7fa}
 </style>
 </head>
 <body>
@@ -407,20 +412,20 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
  </aside>
 </main>
 <div id="status" aria-live="polite"></div>
-<div id="pad-indicator" data-state="offline" aria-live="polite">SN30: desconectado · OFF</div>
+<div id="pad-indicator" data-state="offline" aria-live="polite">Control: desconectado · OFF</div>
 <!-- Alerta permanente mientras el mando no está disponible. No bloquea el tacto. -->
 <div id="pad-connection-alert" data-alert="offline" role="alert" aria-live="assertive">
   <div class="pad-alert-panel">
     <div id="pad-alert-icon" aria-hidden="true">!</div>
     <div id="pad-alert-title">CONTROL
 DESCONECTADO</div>
-    <div id="pad-alert-detail">SN30 SIN CONEXIÓN</div>
+    <div id="pad-alert-detail">MANDO SIN CONEXIÓN</div>
   </div>
 </div>
 <dialog id="modal" aria-label="Controles del marcador">
  <div class="menu-shell">
   <div class="menu-intro">
-   <h2>Controles del marcador</h2>
+   <div class="brand-home" role="button" tabindex="0" id="brand-home" aria-label="Volver al marcador"><span class="brand-p">P</span><h2>Marcador de Pádel</h2></div><p class="brand-sub">Configuración</p>
    <p>Toca el puntaje para sumar. Mantén pulsado el puntaje rojo o azul para corregir el último punto si fue de ese equipo. Para abrir este menú, mantén pulsada la hora. Toca la pelota para indicar quién saca.</p>
    <div class="hint">Teclado: <strong>1</strong> suma al rojo, <strong>2</strong> al azul, <strong>Q</strong> marca saque rojo, <strong>W</strong> marca saque azul, <strong>Z</strong> deshace, <strong>M</strong> abre el menú.</div>
    <div class="style-setting" aria-label="Estilo de números">
@@ -442,16 +447,18 @@ DESCONECTADO</div>
   </div>
   <div class="menu-controls">
    <div class="menu-controls-scroll">
-   <section class="pad-section" aria-label="Control Bluetooth 8BitDo SN30">
-     <h3>Control 8BitDo SN30</h3>
-     <p id="pad-status">SN30: esperando conexión desde Ajustes de Android</p>
+   <button type="button" id="new-match-first" class="new-match-first">Nuevo Partido</button>
+   <h3 class="section-heading">Controles</h3>
+   <section class="pad-section" aria-label="Controles Bluetooth / USB HID">
+     <h3>Mandos conectados</h3>
+     <p id="pad-status">Controles: esperando conexión desde Ajustes de Android</p>
      <p id="pad-team-status">Rojo: X sumar / B restar · Azul: A sumar / Y restar</p>
      <p id="pad-last">Último botón: ninguno</p>
      <div class="actions">
-       <button type="button" id="pad-armed-toggle" aria-pressed="false">Activar SN30</button>
+       <button type="button" id="pad-armed-toggle" aria-pressed="false">Activar controles</button>
        <button type="button" id="pad-reset-mapping">Restablecer botones</button>
      </div>
-     <p>Botones asignados (toca una acción y después pulsa su botón en el SN30):</p>
+     <p>Para asignar botones, toca una acción y pulsa el botón físico del mando. Los valores iniciales son los del SN30:</p>
      <div class="pad-mapping">
        <button type="button" id="pad-map-addRed">Sumar ROJO: X</button>
        <button type="button" id="pad-map-subtractRed">Restar ROJO: B</button>
@@ -459,12 +466,13 @@ DESCONECTADO</div>
        <button type="button" id="pad-map-subtractBlue">Restar AZUL: Y</button>
        <button type="button" id="pad-map-lock">Bloquear/desbloquear: SELECT</button>
      </div>
-     <p id="pad-help">X suma ROJO, B corrige si el último punto fue del ROJO; A suma AZUL, Y corrige si el último punto fue del AZUL. SELECT bloquea/desbloquea el control. No hay selección de equipo. Restar solo deshace el último punto si fue del equipo correspondiente. Para cambios mayores, usa Editar resultado manualmente. Al abrir la app el SN30 comienza desactivado: actívalo desde este menú. Si pierde conexión, se mostrará una alerta grande y se desactivará por seguridad; al reconectar, reactívalo desde aquí. Empareja desde Ajustes de Android &gt; Bluetooth. Puedes reasignar los botones aquí.</p>
+     <p id="pad-help">Compatible con mandos reconocidos por Android como controles de juego HID, incluidos Bluetooth y USB. Predeterminados: X/B rojo, A/Y azul, SELECT bloqueo. Conecta desde Ajustes de Android y pulsa el botón que deseas asociar. Las asignaciones se guardan; puedes restaurar los valores originales. Se aceptan varios mandos conectados, pero en esta versión todos comparten las mismas acciones.</p>
    </section>
+   <h3 class="section-heading">Partido y herramientas</h3>
    <div class="actions">
     <button id="add-red">+ Punto rojo</button><button id="add-blue">+ Punto azul</button>
     <button id="undo">↶ Deshacer punto</button><button id="manual-open" class="primary">Editar resultado manualmente</button>
-    <button id="demo">Cargar ejemplo</button><button id="reset">Nuevo partido</button>
+    <button id="demo">Cargar ejemplo</button>
     <button id="fullscreen">Pantalla completa</button>
     <button id="demo-tiebreak">Probar tie-break 6–6</button>
    </div>
@@ -526,7 +534,7 @@ const map={'0':'abcdef','1':'bc','2':'abged','3':'abgcd','4':'fgbc','5':'afgcd',
 // El estilo se guarda independiente del partido: iniciar uno nuevo no lo altera.
 // Formato visual independiente de los datos del partido y del estilo de cifras.
 const SCORE_LAYOUT_KEY='padel_score_layout_v1';
-let scoreLayout='full';
+let scoreLayout='side';
 try{
  const savedLayout=localStorage.getItem(SCORE_LAYOUT_KEY);
  if(['classic','full','side'].includes(savedLayout))scoreLayout=savedLayout;
@@ -544,7 +552,7 @@ function selectScoreLayout(layout){
  draw('points-red',pointText(0));draw('points-blue',pointText(1));
 }
 const SCORE_STYLE_KEY='padel_score_style_v1';
-let scoreStyle='led';
+let scoreStyle='solid';
 try{if(localStorage.getItem(SCORE_STYLE_KEY)==='solid')scoreStyle='solid'}catch(e){}
 document.documentElement.dataset.scoreStyle=scoreStyle;
 function selectScoreStyle(style){
@@ -655,7 +663,7 @@ function notice(message){
 // Control gamepad HID SN30. Cada equipo tiene botones fijos: no se selecciona.
 // Emparejamiento en Ajustes de Android, sin permisos Bluetooth ni root.
 // Usar clave nueva para ignorar asignaciones anteriores de SELECT/X/B/Y.
-const PAD_MAPPING_KEY='padel_sn30_mapping_v4';
+const PAD_MAPPING_KEY='padel_sn30_mapping_v4'; // mantener datos existentes
 const PAD_ACTIONS=['addRed','subtractRed','addBlue','subtractBlue','lock'];
 const PAD_DEFAULT_MAP={addRed:99,subtractRed:97,addBlue:96,subtractBlue:100,lock:109};
 const PAD_ACTION_LABEL={addRed:'Sumar ROJO',subtractRed:'Restar ROJO',addBlue:'Sumar AZUL',subtractBlue:'Restar AZUL',lock:'Bloquear/desbloquear'};
@@ -686,30 +694,31 @@ function padUpdateUi(){
  alert.dataset.alert=state;
  alert.hidden=state==='armed';
  const titles={offline:'CONTROL\nDESCONECTADO',ready:'CONTROL\nDESACTIVADO',locked:'CONTROL\nBLOQUEADO'};
- const details={offline:'SN30 SIN CONEXIÓN',ready:'ACTIVAR SN30 EN EL MENÚ',locked:'PULSA SELECT PARA DESBLOQUEAR'};
+ const details={offline:'MANDO SIN CONEXIÓN',ready:'ACTIVAR CONTROLES EN EL MENÚ',locked:'PULSA SELECT PARA DESBLOQUEAR'};
  if(state!=='armed'){
   el('pad-alert-title').textContent=titles[state];
   el('pad-alert-detail').textContent=details[state];
  }
- info.textContent='SN30: '+(!padConnected?'desconectado':padDeviceCount+' conectado'+(padDeviceCount>1?'s':''))+' · '+(!padArmed?'OFF':padLocked?'BLOQUEADO':'ON');
- el('pad-armed-toggle').textContent=padArmed?'Desactivar SN30':'Activar SN30';
+ info.textContent='Control: '+(!padConnected?'desconectado':padDeviceCount+' conectado'+(padDeviceCount>1?'s':''))+' · '+(!padArmed?'OFF':padLocked?'BLOQUEADO':'ON');
+ el('pad-armed-toggle').textContent=padArmed?'Desactivar controles':'Activar controles';
  el('pad-armed-toggle').setAttribute('aria-pressed',String(padArmed));
  for(const a of PAD_ACTIONS){
   const b=el('pad-map-'+a);
   b.textContent=PAD_ACTION_LABEL[a]+': '+padKeyLabel(padMap[a]);
   b.dataset.learning=String(padLearning===a);
  }
- el('pad-status').textContent='SN30: '+(padConnected?padDeviceCount+' dispositivo(s) conectado(s)':'sin conectar')+(padLearning?' · esperando tecla para '+PAD_ACTION_LABEL[padLearning]:'');
+ el('pad-status').textContent='Controles: '+(padConnected?padDeviceCount+' dispositivo(s) conectado(s)':'sin conectar')+(padLearning?' · esperando tecla para '+PAD_ACTION_LABEL[padLearning]:'');
 }
 window.padelGamepadStatus=function(count,deviceName){
  const wasConnected=padConnected;
  padDeviceCount=count;
  padConnected=count>0;
+ if(padConnected && !wasConnected){padArmed=true;padLocked=false;}
  if(!padConnected){
   padArmed=false;
   padLocked=false;
   padLearning=null;
-  if(wasConnected)notice('SN30 desconectado: control desactivado');
+  if(wasConnected)notice('Mando desconectado: controles desactivados');
  }
  padUpdateUi();
 };
@@ -733,36 +742,36 @@ window.padelGamepadEvent=function(code,keyName,deviceId){
  if(action==='lock'){
   padLocked=!padLocked;
   padUpdateUi();
-  notice('SN30 '+(padLocked?'BLOQUEADO':'DESBLOQUEADO'));
+  notice('Control '+(padLocked?'BLOQUEADO':'DESBLOQUEADO'));
   return;
  }
  if(padLocked)return;
  if(action==='addRed'){
-  if(!s.ended){addPoint(0);notice('SN30: +1 ROJO')}
+  if(!s.ended){addPoint(0);notice('Control: +1 ROJO')}
  }else if(action==='subtractRed'){
   undoTeam(0);
  }else if(action==='addBlue'){
-  if(!s.ended){addPoint(1);notice('SN30: +1 AZUL')}
+  if(!s.ended){addPoint(1);notice('Control: +1 AZUL')}
  }else if(action==='subtractBlue'){
   undoTeam(1);
  }
 };
 el('pad-armed-toggle').onclick=()=>{
- if(!padConnected){notice('Empareja y conecta el SN30 desde Ajustes Bluetooth');return;}
+ if(!padConnected){notice('Conecta un mando compatible desde Android');return;}
  padLearning=null;
  padArmed=!padArmed;
  padLocked=false;
  padUpdateUi();
- notice('Control SN30 '+(padArmed?'ACTIVADO':'DESACTIVADO'));
+ notice('Control '+(padArmed?'ACTIVADO':'DESACTIVADO'));
 };
 for(const action of PAD_ACTIONS){
  el('pad-map-'+action).onclick=()=>{
-  if(!padConnected){notice('Conecta el SN30 antes de asignar botones');return;}
+  if(!padConnected){notice('Conecta un mando antes de asignar botones');return;}
   padArmed=false;
   padLocked=false;
   padLearning=action;
   padUpdateUi();
-  notice('Pulsa en SN30 el botón para '+PAD_ACTION_LABEL[action]);
+  notice('Pulsa en el mando el botón para '+PAD_ACTION_LABEL[action]);
  };
 }
 el('pad-reset-mapping').onclick=()=>{
@@ -1088,7 +1097,10 @@ el('add-blue').onclick=()=>{addPoint(1);el('modal').close()};
 el('undo').onclick=()=>{undo();el('modal').close()};
 el('demo').onclick=()=>askReplacement('demo');
 el('demo-tiebreak').onclick=()=>askReplacement('tiebreak');
-el('reset').onclick=askReset;
+el('new-match-first').onclick=askReset;
+function closeFromBrand(){el('modal').close()}
+el('brand-home').onclick=closeFromBrand;
+el('brand-home').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();closeFromBrand()}};
 el('reset-accept').onclick=confirmReplacement;
 el('reset-cancel').onclick=cancelReset;
 el('reset-confirm').addEventListener('cancel',(event)=>{event.preventDefault();cancelReset()});

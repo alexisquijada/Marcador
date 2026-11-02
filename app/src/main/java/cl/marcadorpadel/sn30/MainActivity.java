@@ -20,7 +20,7 @@ import org.json.JSONObject;
 import java.util.Locale;
 
 /**
- * Marcador Pádel v3.1 — únicamente mando 8BitDo SN30 HID.
+ * Marcador Pádel v3.1 — mandos Android HID genéricos.
  * El emparejamiento Bluetooth lo realiza Android desde Ajustes.
  * No hace escaneo BLE, no necesita permisos de Bluetooth ni root.
  */
@@ -83,7 +83,7 @@ public class MainActivity extends Activity {
         });
         setContentView(webView);
         webView.loadUrl("file:///android_asset/index.html");
-        Log.i(TAG, "Marcador v3.1 iniciado. Entrada por 8BitDo SN30 HID.");
+        Log.i(TAG, "Marcador v3.1 iniciado. Entrada por mandos Android HID.");
     }
 
     /**
@@ -94,11 +94,11 @@ public class MainActivity extends Activity {
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         InputDevice device = event.getDevice();
         if (device == null) device = InputDevice.getDevice(event.getDeviceId());
-        if (isSn30(device) && isControllerKey(event.getKeyCode())) {
+        if (isGameController(device) && isControllerKey(event.getKeyCode())) {
             if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
                 int code = event.getKeyCode();
                 String name = KeyEvent.keyCodeToString(code);
-                Log.d(TAG, "SN30 pulsado " + name + " (" + code + ") dispositivo=" + event.getDeviceId());
+                Log.d(TAG, "Control pulsado " + name + " (" + code + ") dispositivo=" + event.getDeviceId());
                 runJs("window.padelGamepadEvent(" + code + ","
                         + JSONObject.quote(name) + "," + event.getDeviceId() + ");");
             }
@@ -108,10 +108,11 @@ public class MainActivity extends Activity {
         return super.dispatchKeyEvent(event);
     }
 
-    private static boolean isSn30(InputDevice device) {
-        if (device == null || device.getName() == null) return false;
-        String name = device.getName().toLowerCase(Locale.US);
-        return name.contains("8bitdo") && name.contains("sn30");
+    private static boolean isGameController(InputDevice device) {
+        if (device == null) return false;
+        int sources = device.getSources();
+        return ((sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD)
+                || ((sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK);
     }
 
     private static boolean isControllerKey(int code) {
@@ -127,12 +128,12 @@ public class MainActivity extends Activity {
         String name = "";
         for (int id : InputDevice.getDeviceIds()) {
             InputDevice device = InputDevice.getDevice(id);
-            if (isSn30(device)) {
+            if (isGameController(device)) {
                 count++;
                 name = device.getName();
             }
         }
-        Log.d(TAG, "Controles SN30 conectados: " + count);
+        Log.d(TAG, "Mandos HID conectados: " + count);
         runJs("window.padelGamepadStatus(" + count + "," + JSONObject.quote(name) + ");");
     }
 
