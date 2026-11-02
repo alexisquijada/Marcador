@@ -1,7 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:allowBackup="false"
-        android:label="Marcador Pádel SN30"
+        android:label="MatchBoard"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">

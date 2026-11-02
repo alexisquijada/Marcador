@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#000000">
-<title>Marcador de Pádel — Controles HID v3.2</title>
+<title>MatchBoard — Pádel</title>
 <style>
 :root {
   color-scheme: dark;
@@ -382,6 +382,26 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
 .brand-p{display:grid;place-items:center;width:42px;height:42px;border-radius:10px;background:#294d84;color:white;font-size:28px;font-weight:900;flex-shrink:0}
 .brand-sub{margin:4px 0 10px!important;color:#aab5c5}.new-match-first{width:100%;min-height:48px;background:#295da6!important;border:1px solid #80b5ff!important;color:#fff!important;font-weight:900!important;font-size:18px!important;border-radius:11px}
 .section-heading{margin:8px 0 4px;font-size:15px;color:#dce7fa}
+
+/* MATCHBOARD v3.3: identidad SOLO para configuracion; no aplica al marcador. */
+#modal,#reset-confirm,#manual-edit{font-family:Roboto,'Arial',sans-serif;background:#101A13;color:#FFFFFF;border:1px solid #36553D}
+#modal::backdrop,#reset-confirm::backdrop{background:#000c}
+#modal .menu-intro,#modal .menu-controls,#modal .pad-section{color:#FFFFFF}
+#modal p,#reset-confirm p{color:#BED0C1}
+#modal .brand-home{background:linear-gradient(125deg,#062F16,#031C0D);padding:10px 13px;border:1px solid #36553D;border-radius:14px}
+#modal .brand-p{background:linear-gradient(135deg,#062F16,#91EF00);color:#FFFFFF;font-size:16px;font-weight:900;border:1px solid #91EF00}
+#modal .brand-home:focus-visible{outline:2px solid #91EF00}
+#modal .brand-sub,#modal .hint{color:#BED0C1}
+#modal .section-heading{color:#C4FF47}
+#modal button:not(.new-match-first),#reset-confirm button,#manual-edit button{background:#1A2A1E;border:1px solid #36553D;color:#FFFFFF;border-radius:12px}
+#modal button.new-match-first,#modal button.primary,#reset-confirm button.primary,#manual-edit button.primary{background:#91EF00!important;border-color:#C4FF47!important;color:#102010!important;font-weight:800}
+#modal button[data-learning="true"]{border:2px solid #91EF00!important;background:#244322!important}
+#modal .pad-section,#modal .style-setting,#modal .layout-setting{background:#1A2A1E;border-color:#36553D;border-radius:14px}
+#modal button:focus-visible,#reset-confirm button:focus-visible{outline:2px solid #C4FF47;outline-offset:2px}
+#modal .closebtn{background:#062F16!important;border-color:#91EF00!important;color:#FFFFFF!important}
+#modal .rules-pill{background:#1A2A1E}
+#modal .about-matchboard{border:1px solid #36553D;background:#1A2A1E;border-radius:12px;padding:10px 12px;margin:9px 0;color:#BED0C1;font-size:12px;line-height:1.5}
+
 </style>
 </head>
 <body>
@@ -425,7 +445,7 @@ DESCONECTADO</div>
 <dialog id="modal" aria-label="Controles del marcador">
  <div class="menu-shell">
   <div class="menu-intro">
-   <div class="brand-home" role="button" tabindex="0" id="brand-home" aria-label="Volver al marcador"><span class="brand-p">P</span><h2>Marcador de Pádel</h2></div><p class="brand-sub">Configuración</p>
+   <div class="brand-home" role="button" tabindex="0" id="brand-home" aria-label="Volver al marcador"><span class="brand-p">MB</span><h2>MatchBoard</h2></div><p class="brand-sub">Configuración</p>
    <p>Toca el puntaje para sumar. Mantén pulsado el puntaje rojo o azul para corregir el último punto si fue de ese equipo. Para abrir este menú, mantén pulsada la hora. Toca la pelota para indicar quién saca.</p>
    <div class="hint">Teclado: <strong>1</strong> suma al rojo, <strong>2</strong> al azul, <strong>Q</strong> marca saque rojo, <strong>W</strong> marca saque azul, <strong>Z</strong> deshace, <strong>M</strong> abre el menú.</div>
    <div class="style-setting" aria-label="Estilo de números">
@@ -476,6 +496,7 @@ DESCONECTADO</div>
     <button id="fullscreen">Pantalla completa</button>
     <button id="demo-tiebreak">Probar tie-break 6–6</button>
    </div>
+   <div class="about-matchboard"><strong>MatchBoard v3.3</strong> · Marcador de pádel sin anuncios · Funciona sin Internet.<br>Controles compatibles: mandos HID reconocidos por Android. Ayuda y privacidad: ver PRIVACIDAD.md en el proyecto.</div>
    <div id="rules-pill">Modo: <strong>punto de oro</strong> · sin ventaja</div>
    </div>
    <button class="closebtn" id="close">Volver al marcador</button>
@@ -688,7 +709,7 @@ function padUpdateUi(){
  const info=el('pad-indicator');
  const state=!padConnected?'offline':!padArmed?'ready':padLocked?'locked':'armed';
  info.dataset.state=state;
- // El mensaje gigante solo desaparece cuando el SN30 esta conectado,
+ // El mensaje gigante solo desaparece cuando un mando HID esta conectado,
  // habilitado y desbloqueado. No confundir 'conectado' con 'operativo'.
  const alert=el('pad-connection-alert');
  alert.dataset.alert=state;

@@ -3,13 +3,13 @@ plugins {
 }
 android {
     namespace 'cl.marcadorpadel.sn30'
-    compileSdk 35
+    compileSdk 36
     defaultConfig {
         applicationId 'cl.marcadorpadel.sn30'
         minSdk 23
-        targetSdk 29
-        versionCode 32
-        versionName '3.2-HID-MENU'
+        targetSdk 36
+        versionCode 33
+        versionName '3.3-MATCHBOARD'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
