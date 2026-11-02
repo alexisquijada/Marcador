@@ -402,6 +402,28 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
 #modal .rules-pill{background:#1A2A1E}
 #modal .about-matchboard{border:1px solid #36553D;background:#1A2A1E;border-radius:12px;padding:10px 12px;margin:9px 0;color:#BED0C1;font-size:12px;line-height:1.5}
 
+
+/* MatchBoard 3.4 - Navegacion del menu. Los estilos del marcador no se modifican. */
+#modal{width:min(1080px,96vw);max-height:94dvh;padding:16px}
+#modal .menu-shell{display:grid;grid-template-columns:minmax(190px,28%) minmax(0,1fr);gap:14px;height:min(82dvh,710px);max-height:none}
+#modal .menu-intro{overflow-y:auto;padding:0 5px 0 0}
+#modal .menu-controls{overflow:hidden;display:flex;flex-direction:column;min-height:0}
+#modal .menu-controls-scroll{overflow-y:auto;flex:1;display:block;padding:4px 8px 16px 0}
+.mb-menu-nav{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+#modal .mb-nav-btn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:13px 14px;min-height:49px;border-radius:11px;background:#1A2A1E;border:1px solid #36553D;color:#fff;font-weight:750;font-size:15px}
+#modal .mb-nav-btn[aria-current="page"]{background:#25492B;border:2px solid #91EF00;color:#C4FF47}
+#modal .mb-nav-btn.mb-new{background:#91EF00;color:#102010;border:1px solid #C4FF47;font-weight:900}
+#modal .mb-menu-panel[hidden]{display:none!important}
+#modal .mb-menu-panel h3{margin:10px 0 14px;color:#C4FF47;font-size:21px}
+#modal .mb-menu-panel p{line-height:1.5}
+#modal .mb-menu-panel .actions{margin:8px 0 12px}
+#modal .mb-menu-panel .pad-section{margin:8px 0}
+#modal .mb-menu-panel .style-setting,#modal .mb-menu-panel .layout-setting{margin:12px 0;padding:14px}
+#modal .mb-menu-panel .mb-note{padding:12px;background:#1A2A1E;border-radius:11px;color:#BED0C1}
+#modal .mb-close-hint{font-size:12px;color:#BED0C1;margin-top:12px}
+#modal .closebtn{flex-shrink:0;margin-top:8px}
+@media(max-width:620px){#modal{padding:12px}#modal .menu-shell{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);height:86dvh;gap:8px}#modal .menu-intro{overflow:visible;padding:0}#modal .mb-menu-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:6px}#modal .mb-nav-btn{font-size:11px;min-height:41px;padding:7px 6px}#modal .menu-controls-scroll{overflow-y:auto}#modal .brand-home{padding:5px 8px}#modal .brand-sub{display:none}}
+
 </style>
 </head>
 <body>
@@ -466,7 +488,7 @@ DESCONECTADO</div>
    </div>
   </div>
   <div class="menu-controls">
-   <div class="menu-controls-scroll">
+   <div class="menu-controls-scroll" id="mb-menu-scroll">
    <button type="button" id="new-match-first" class="new-match-first">Nuevo Partido</button>
    <h3 class="section-heading">Controles</h3>
    <section class="pad-section" aria-label="Controles Bluetooth / USB HID">
@@ -496,7 +518,7 @@ DESCONECTADO</div>
     <button id="fullscreen">Pantalla completa</button>
     <button id="demo-tiebreak">Probar tie-break 6–6</button>
    </div>
-   <div class="about-matchboard"><strong>MatchBoard v3.3</strong> · Marcador de pádel sin anuncios · Funciona sin Internet.<br>Controles compatibles: mandos HID reconocidos por Android. Ayuda y privacidad: ver PRIVACIDAD.md en el proyecto.</div>
+   <div class="about-matchboard"><strong>MatchBoard v3.4</strong> · Marcador de pádel sin anuncios · Funciona sin Internet.<br>Controles compatibles: mandos HID reconocidos por Android. Ayuda y privacidad: ver PRIVACIDAD.md en el proyecto.</div>
    <div id="rules-pill">Modo: <strong>punto de oro</strong> · sin ventaja</div>
    </div>
    <button class="closebtn" id="close">Volver al marcador</button>
@@ -1165,6 +1187,49 @@ window.addEventListener('resize',()=>{
 });
 setInterval(updateClock,1000);
 setTimeout(()=>notice('Toque: sumar · mantener puntaje: restar · mantener hora: menú'),300);
+
+/* Menu completo MatchBoard: reorganiza controles existentes sin duplicar listeners. */
+(function initMatchBoardMenu(){
+ const modal=el('modal'),intro=modal.querySelector('.menu-intro'),scroll=el('mb-menu-scroll');
+ const keys=['partido','apariencia','controles','reglas','herramientas','botones','manual'];
+ const names={partido:'Partido',apariencia:'Apariencia',controles:'Controles',reglas:'Reglas actuales',herramientas:'Herramientas',botones:'Botones',manual:'Edición manual'};
+ const panels={};
+ keys.forEach(k=>{const section=document.createElement('section');section.className='mb-menu-panel';section.dataset.section=k;section.hidden=true;section.innerHTML='<h3>'+names[k]+'</h3>';scroll.appendChild(section);panels[k]=section;});
+ const move=(selector,k)=>{const node=modal.querySelector(selector);if(node)panels[k].appendChild(node);};
+ // Apariencia y orientaciones originales: mismos botones, ids y controladores.
+ move('.style-setting','apariencia');move('.layout-setting','apariencia');
+ // Controles genericos, asignacion y deteccion existentes.
+ move('.pad-section','controles');
+ const mapping=panels.controles.querySelector('.pad-mapping');
+ const mapText=panels.controles.querySelector('#pad-help');
+ const buttonSection=document.createElement('div');buttonSection.className='mb-note';
+ buttonSection.innerHTML='<strong>Asignar botones por pulsación</strong><p>Selecciona una acción y pulsa el botón del mando. Se mantienen X/B para rojo, A/Y para azul y SELECT para bloqueo. Restablecer restaura los valores originales.</p>';
+ panels.botones.appendChild(buttonSection);
+ if(mapping)panels.botones.appendChild(mapping);
+ move('#pad-reset-mapping','botones');
+ if(mapText)panels.botones.appendChild(mapText);
+ // Reutilizar el botón de edición manual con su listener original.
+ move('#manual-open','manual');
+ const tools=modal.querySelector('.menu-controls-scroll > .actions');
+ if(tools)panels.herramientas.appendChild(tools);
+ move('.about-matchboard','herramientas');
+ move('#rules-pill','reglas');
+ const rules=document.createElement('p');rules.className='mb-note';rules.textContent='Punto de oro en 40–40; tie-break automático al llegar a 6–6; partido a dos sets ganados. Se mantienen las reglas actuales.';panels.reglas.appendChild(rules);
+ const part=document.createElement('div');part.className='mb-note';part.innerHTML='<p>Inicia un partido nuevo desde la primera opción del menú. Se solicita confirmación antes de reiniciar puntos, juegos, sets, tiempo e historial.</p><p>También puedes deshacer la última jugada desde Herramientas o editar el resultado desde Edición manual.</p>';panels.partido.appendChild(part);
+ // La navegación reemplaza el texto de ayuda antiguo, que se conserva en Herramientas.
+ const description=intro.querySelector(':scope > p:not(.brand-sub)');const hint=intro.querySelector('.hint');
+ if(description)panels.herramientas.appendChild(description);
+ if(hint)panels.herramientas.appendChild(hint);
+ const nav=document.createElement('nav');nav.className='mb-menu-nav';nav.setAttribute('aria-label','Menú de configuración');
+ const navigate=k=>{keys.forEach(name=>panels[name].hidden=(name!==k));nav.querySelectorAll('[data-target]').forEach(b=>b.setAttribute('aria-current',b.dataset.target===k?'page':'false'));scroll.scrollTop=0;};
+ const first=el('new-match-first');first.className='mb-nav-btn mb-new';first.textContent='＋ Nuevo Partido';nav.appendChild(first);
+ keys.forEach(k=>{const b=document.createElement('button');b.type='button';b.className='mb-nav-btn';b.dataset.target=k;b.textContent=names[k]+' ›';b.onclick=()=>navigate(k);nav.appendChild(b);});
+ intro.appendChild(nav);navigate('partido');
+ // Dejar sin cambios la acción del encabezado: cierra y regresa al marcador.
+ const priorOpen=window.openMenu;
+ window.openMenu=function(){navigate('partido');priorOpen()};
+})();
+
 </script>
 </body>
 </html>

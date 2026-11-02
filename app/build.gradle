@@ -5,11 +5,11 @@ android {
     namespace 'cl.marcadorpadel.sn30'
     compileSdk 36
     defaultConfig {
-        applicationId 'cl.marcadorpadel.sn30'
+        applicationId 'cl.matchboard.app'
         minSdk 23
         targetSdk 36
-        versionCode 33
-        versionName '3.3-MATCHBOARD'
+        versionCode 39
+        versionName '3.9-MATCHBOARD'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
