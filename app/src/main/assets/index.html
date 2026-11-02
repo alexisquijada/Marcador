@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Marcador de Pádel — BLE v2.5</title>
+<style>
+:root {
+  color-scheme: dark;
+  --red:#ff1515;
+  --blue:#159cff;
+  --line:#f0f0f0;
+  --bg:#000;
+  --soft:#9ea4ad;
+  font-family:Arial,Helvetica,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
+#scoreboard{height:100%;height:100dvh;width:100%;display:flex;flex-direction:column;padding:1.1vh 2vw 1.2vh;gap:1vh;user-select:none;-webkit-user-select:none}
+#topbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;flex:0 0 auto;border-bottom:2px solid var(--line);padding:0 2px 4px;min-height:48px}
+#clock-now{grid-column:1;justify-self:start}
+#elapsed-min{grid-column:3;justify-self:end}
+#tiebreak-label{grid-column:2;justify-self:center;visibility:hidden;color:#fff;font-weight:900;letter-spacing:-.025em;font-size:clamp(22px,5vw,46px);line-height:1;white-space:nowrap;text-align:center}
+#tiebreak-label.visible{visibility:visible}
+#tiebreak-label.is-tiebreak{font-size:clamp(26px,6vw,52px)}
+.meta-value{font-size:clamp(18px,3.6vw,36px);font-weight:900;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.2}
+.team{flex:1 1 0; min-height:0;min-width:0;display:grid;grid-template-columns:54% 43%;gap:3%;align-items:center;}
+.score-area{height:100%;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(50px,11vw,76px);align-items:center;justify-items:center;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;position:relative;}
+.score-area:focus-visible{outline:1px dashed #777;outline-offset:-5px}
+.score-digits{grid-column:1;grid-row:1;width:100%;height:96%;max-height:40vh;display:block;min-width:0}
+.team.red{color:var(--red)} .team.blue{color:var(--blue)}
+.stats{min-height:0;width:100%;height:min(82%,34vh);border:0;border-radius:clamp(16px,3.1vw,38px);background:#1a1a1c;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;padding:1.1vh 0;overflow:hidden;}
+.stat{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(1px,.8vh,10px);min-width:0;min-height:0;}
+.stat + .stat{border-left:1px solid #777b82}
+.stat-label{color:#f7f7f7;font-weight:800;font-size:clamp(13px,2.05vw,28px);line-height:1;letter-spacing:-.02em}
+.stat-number{display:flex;align-items:center;justify-content:center;max-width:100%;font-family:Arial,Helvetica,sans-serif;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.06em;font-size:clamp(42px,18vh,160px);line-height:.94;white-space:nowrap}
+svg{overflow:visible}
+.score-area.flash svg{filter:drop-shadow(0 0 .5rem currentColor)}
+.serve-btn{grid-column:2;grid-row:1;position:relative;right:auto;bottom:auto;transform:none;margin:auto;width:clamp(34px,5vw,58px);height:clamp(34px,5vw,58px);border:none;background:transparent;display:grid;place-items:center;padding:0;cursor:pointer;z-index:2}
+.serve-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;opacity:.5;background:#c3d14c;box-shadow:none;outline:1px solid #87952b}
+.serve-btn .ball::before,.serve-btn .ball::after{content:'';position:absolute;top:12%;bottom:12%;width:38%;border:2px solid #e0e8ad;border-top:none;border-bottom:none;border-radius:50%}
+.serve-btn .ball::before{left:8%;transform:rotate(12deg)}
+.serve-btn .ball::after{right:8%;transform:rotate(12deg)}
+.team.red .serve-btn{color:var(--red)} .team.blue .serve-btn{color:var(--blue)}
+.serve-btn.active{filter:none}
+.serve-btn.active .ball{opacity:1;box-shadow:none;outline:1px solid #e0e8ad}
+.serve-btn:not(.active){opacity:.24}
+#status{position:fixed;bottom:12px;left:16px;right:16px;z-index:2;pointer-events:none;text-align:center;font-size:13px;color:#dedede;background:#000c;border-radius:8px;padding:5px;opacity:0;transition:opacity .4s;}
+#status.visible{opacity:1}
+#clock-now{cursor:pointer;touch-action:manipulation;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#modal,#reset-confirm{border:0;border-radius:18px;background:#15171b;color:#fff;width:min(490px,92vw);max-height:90dvh;overflow:auto;padding:23px;box-shadow:0 12px 70px #000a;font-family:Arial,Helvetica,sans-serif}
+#modal::backdrop,#reset-confirm::backdrop{background:#000b}
+#modal h2,#reset-confirm h2{margin:0 0 6px;font-size:23px}
+#modal p,#reset-confirm p{margin:0 0 20px;color:#bcbfc6;font-size:14px;line-height:1.4}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions button,.closebtn{border:1px solid #555;background:#24282e;color:#f9f9f9;border-radius:10px;padding:13px 9px;font-weight:650;font-size:15px;cursor:pointer}
+.actions button:disabled{opacity:.35;cursor:not-allowed}
+.actions button.primary{background:#2960bd;border-color:#4779d0}
+.closebtn{margin-top:15px;width:100%}
+.hint{font-size:12px;color:#aab0ba;margin-top:14px;line-height:1.6}
+#rules-pill{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:9px 12px;border-radius:999px;border:1px solid #4f5560;background:#1d2229;color:#fff;font-size:13px;font-weight:700}
+@media (orientation:portrait){
+ #scoreboard{padding:1.4vh 3vw 1.4vh;gap:1.4vh}
+ #topbar{gap:8px}
+ #topbar{min-height:44px;padding-bottom:4px}
+ .meta-value{font-size:clamp(17px,5vw,27px)}
+ #tiebreak-label{font-size:clamp(23px,8vw,36px)}
+ #tiebreak-label.is-tiebreak{font-size:clamp(28px,10vw,44px)}
+ .team{display:flex;flex-direction:column;gap:.5vh;justify-content:space-around;padding:0 1.5vw}
+ .score-area{width:100%;height:62%;flex:0 1 62%}
+ .score-digits{height:100%;max-height:27vh}
+ .stats{width:93%;height:29%;flex:0 0 29%;border-radius:clamp(18px,4vw,45px);padding:.9vh 0}
+ .stat-label{font-size:clamp(16px,3.8vw,31px)}
+ .stat-number{font-size:clamp(40px,7.3vh,96px)}
+ .serve-btn{width:clamp(34px,10vw,54px);height:clamp(34px,10vw,54px)}
+}
+@media (max-height:450px) and (orientation:landscape){
+ .stat-label{font-size:clamp(11px,2.15vw,25px)}
+ .stats{padding:0}
+ #topbar{min-height:36px}
+}
+@media (max-width:360px) and (orientation:portrait){
+ .meta-value{font-size:clamp(15px,5vw,17px)}
+ #topbar{gap:4px}
+ #tiebreak-label{font-size:clamp(23px,7.7vw,28px);letter-spacing:-.035em}
+ #tiebreak-label.is-tiebreak{font-size:clamp(26px,9vw,33px)}
+}
+
+/* Menú adaptable a vertical y horizontal */
+.menu-shell{display:flex;flex-direction:column;gap:4px;min-height:0}
+.menu-intro,.menu-controls{min-width:0}
+.menu-controls{display:flex;flex-direction:column;align-items:stretch;gap:0;min-width:0}
+.menu-controls .actions{width:100%}
+.menu-controls .closebtn{flex-shrink:0}
+@media (orientation:landscape){
+ #scoreboard{padding:.8vh 1.5vw 1vh;gap:.7vh}
+ #topbar{min-height:31px;padding-bottom:2px}
+ .team{grid-template-columns:minmax(0,54fr) minmax(0,43fr);gap:3%}
+ .score-digits{max-height:43vh}
+ .stats{height:84%;max-height:none;padding:.5vh 0}
+ .stat-label{font-size:clamp(11px,2vw,27px)}
+ .stat-number{font-size:clamp(38px,18vh,160px)}
+ #modal{width:min(940px,97vw);max-width:97vw;max-height:94dvh;overflow:hidden;padding:12px 14px;border-radius:16px}
+ #modal .menu-shell{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.35fr);gap:clamp(10px,2vw,20px);max-height:calc(94dvh - 24px);min-height:0}
+ #modal .menu-intro,#modal .menu-controls{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+ #modal .menu-intro{padding-right:3px}
+ #modal .menu-controls{gap:8px;padding-right:2px}
+ #modal h2{font-size:clamp(18px,2.3vw,25px);margin:0 0 8px}
+ #modal p{font-size:clamp(12px,1.5vw,15px);margin:0 0 8px}
+ #modal .hint{font-size:clamp(10px,1.3vw,12px);margin-top:8px;line-height:1.45}
+ #modal .actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+ #modal .actions button{min-height:42px;padding:7px 4px;font-size:clamp(12px,1.5vw,15px);line-height:1.15}
+ #modal #rules-pill{margin-top:0;padding:7px 9px;font-size:12px;align-self:flex-start;flex-shrink:0}
+ #modal #close{margin-top:0;width:100%;min-height:40px;font-size:clamp(12px,1.45vw,15px)}
+ #reset-confirm{width:min(500px,93vw);max-height:94dvh;padding:clamp(10px,3vh,20px)}
+ #reset-confirm p{margin:0 0 12px}
+}
+@media (orientation:landscape) and (max-width:510px){
+ #modal .menu-shell{grid-template-columns:minmax(0,.75fr) minmax(0,1.45fr);gap:8px}
+ #modal .actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #modal .actions button{min-height:38px}
+}
+@media (orientation:portrait) and (max-height:580px){
+ #modal{padding:12px;max-height:95dvh}
+ #modal h2{font-size:20px}
+ #modal p{margin-bottom:10px}
+}
+
+/* v2.0: títulos únicos y panel compartido para los dos equipos. */
+#scoreboard{
+ display:grid;
+ grid-template-columns:minmax(0,48fr) minmax(0,49fr);
+ grid-template-rows:minmax(0,auto) minmax(0,1fr) minmax(0,1fr);
+ column-gap:1.5%;row-gap:.8vh;
+}
+#topbar{grid-column:1/-1;grid-row:1}
+.team{grid-column:1;display:block;padding:0;min-width:0;min-height:0}
+.team.red{grid-row:2}.team.blue{grid-row:3}
+.score-area{height:100%;width:100%}
+#stats-shared{
+ grid-column:2;grid-row:2/4;
+ align-self:center;justify-self:stretch;
+ width:100%;height:95%;min-height:0;
+ border-radius:clamp(16px,3vw,36px);
+ background:#1a1a1c;
+ display:grid;grid-template-columns:minmax(0,1fr);
+ grid-template-rows:18% 41% 41%;
+ overflow:hidden;position:relative;
+ padding:1vh 0;
+}
+#stats-shared::after{content:'';position:absolute;left:50%;top:5%;bottom:5%;border-left:1px solid #5a5c62;pointer-events:none}
+.stats-header,.stats-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;justify-items:center;min-height:0;min-width:0}
+.stats-header{color:#f7f7f7;font-size:clamp(15px,2.1vw,28px);font-weight:800;line-height:1;letter-spacing:-.02em}
+.stats-header span{white-space:nowrap}
+.stats-row{font-size:clamp(40px,16vh,150px);font-family:Arial,Helvetica,sans-serif;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.06em}
+.stats-red{color:var(--red)}
+.stats-blue{color:var(--blue);border-top:1px solid #36383b}
+#stats-shared .stat-number{display:block;max-width:100%;font-size:inherit;line-height:1;white-space:nowrap;overflow:visible}
+@media (orientation:portrait){
+ #scoreboard{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) minmax(0,1fr) minmax(0,.55fr);column-gap:0;row-gap:1.1vh;padding:1.4vh 3vw}
+ #topbar{grid-column:1;grid-row:1}
+ .team{grid-column:1;display:block;padding:0 1vw}
+ .team.red{grid-row:2}.team.blue{grid-row:3}
+ .score-area{width:100%;height:100%;display:grid}
+ .score-digits{height:96%;max-height:30vh}
+ #stats-shared{grid-column:1;grid-row:4;width:94%;height:100%;justify-self:center;grid-template-rows:24% 38% 38%;border-radius:clamp(14px,3vw,34px);padding:.4vh 0}
+ .stats-header{font-size:clamp(14px,3.2vw,27px)}
+ .stats-row{font-size:clamp(36px,7.1vh,96px)}
+}
+@media (orientation:landscape) and (max-height:450px){
+ #stats-shared{height:98%;padding:.3vh 0;border-radius:clamp(10px,2.2vw,24px)}
+ .stats-row{font-size:clamp(30px,16vh,75px)}
+ .stats-header{font-size:clamp(12px,2vw,22px)}
+}
+@media (orientation:portrait) and (max-height:650px){
+ #scoreboard{grid-template-rows:auto minmax(0,1fr) minmax(0,1fr) minmax(0,.7fr)}
+ .stats-row{font-size:clamp(30px,6vh,75px)}
+}
+
+/* v2.1: el usuario elige LED mejorado o números sólidos; preferencia persistente. */
+.style-setting{margin-top:3px;padding:10px 11px;border:1px solid #3e434d;border-radius:12px;background:#1c2027}
+.style-heading{font-size:13px;font-weight:800;color:#e9ebee;margin-bottom:8px}
+.style-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.style-option{border:1px solid #555c67;border-radius:9px;background:#252a33;color:#edf0f6;min-height:38px;padding:7px 5px;font-size:13px;font-weight:750;cursor:pointer;line-height:1.1}
+.style-option[aria-pressed="true"]{background:#28446d;border-color:#7bb0fc;box-shadow:inset 0 0 0 1px #7bb0fc}
+.style-option:focus-visible{outline:2px solid #e8f2ff;outline-offset:2px}
+html[data-score-style="led"] .score-digits polygon{stroke:currentColor;stroke-width:1.4;stroke-linejoin:round}
+html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Roboto,sans-serif;font-weight:900;letter-spacing:-.045em;fill:currentColor}
+@media (orientation:landscape){
+ #scoreboard{grid-template-columns:minmax(0,48fr) minmax(0,49fr);column-gap:1.5%}
+ #modal .style-setting{padding:7px 9px;margin-top:0;flex-shrink:0}
+ #modal .style-heading{font-size:12px;margin-bottom:5px}
+ #modal .style-option{min-height:32px;padding:5px 3px;font-size:clamp(11px,1.35vw,14px)}
+}
+/* v2.2: puntos a máxima altura en formato horizontal.
+   El reloj conserva el acceso oculto al menú. */
+@media (orientation:landscape){
+ #scoreboard{
+  padding:0 1vw;
+  row-gap:clamp(3px,.7vh,8px);
+  column-gap:1.5%;
+  grid-template-rows:clamp(27px,4.2vh,38px) minmax(0,1fr) minmax(0,1fr);
+ }
+ #topbar{min-height:0;height:100%;padding:0 2px 1px;border-bottom-width:1px}
+ #topbar .meta-value{font-size:clamp(15px,3.3vh,28px);line-height:1}
+ #tiebreak-label{font-size:clamp(18px,3.3vh,31px)}
+ #tiebreak-label.is-tiebreak{font-size:clamp(20px,3.9vh,34px)}
+ .team{height:100%;min-height:0}
+ .score-area{height:100%;align-items:stretch}
+ .score-digits{height:100%;max-height:100%;min-height:0;align-self:stretch}
+ #stats-shared{height:99%;padding:.3vh 0}
+}
+
+/* v2.3: Tres distribuciones independientes del estilo de numeros.
+   En vertical se conserva el marcador apilado ya probado. */
+.layout-setting{margin-top:3px;padding:10px 11px;border:1px solid #3e434d;border-radius:12px;background:#1c2027}
+.layout-heading{font-size:13px;font-weight:800;color:#e9ebee;margin-bottom:8px}
+.layout-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.layout-option{min-height:43px;border:1px solid #555c67;border-radius:9px;background:#252a33;color:#edf0f6;padding:6px 3px;font-size:12px;font-weight:750;cursor:pointer;line-height:1.15}
+.layout-option[aria-pressed="true"]{background:#28446d;border-color:#7bb0fc;box-shadow:inset 0 0 0 1px #7bb0fc}
+.layout-option:focus-visible{outline:2px solid #e8f2ff;outline-offset:2px}
+.layout-note{font-size:11px;color:#adb5c1;margin-top:6px}
+@media (orientation:landscape){
+ #modal .layout-setting{margin-top:0;padding:7px 9px;flex-shrink:0}
+ #modal .layout-heading{font-size:12px;margin-bottom:5px}
+ #modal .layout-option{min-height:34px;font-size:clamp(10px,1.22vw,13px);padding:4px 2px}
+ #modal .layout-note{font-size:10px;margin-top:4px}
+ /* El formato 'clasico' preserva el marcador anterior con mas aire vertical. */
+ html[data-layout="classic"] #scoreboard{padding:.8vh 1.5vw 1vh;row-gap:.8vh;grid-template-rows:clamp(31px,5vh,46px) minmax(0,1fr) minmax(0,1fr)}
+ html[data-layout="classic"] .score-area{align-items:center}
+ html[data-layout="classic"] .score-digits{height:96%;max-height:43vh;align-self:center}
+ html[data-layout="classic"] #stats-shared{height:95%;padding:.7vh 0}
+ /* El formato 'completo' usa las reglas full-height de v2.2, sin cambios. */
+ /* Lado a lado: rojo y azul comparten la altura; estadísticas más angostas al costado. */
+ html[data-layout="side"] #scoreboard{
+   grid-template-columns:minmax(0,37fr) minmax(0,35fr) minmax(0,27fr);
+   grid-template-rows:clamp(27px,4.2vh,38px) minmax(0,1fr);
+   column-gap:.45vw;row-gap:clamp(3px,.8vh,8px);padding:0 1vw .55vh;
+ }
+ html[data-layout="side"] #topbar{grid-column:1/-1;grid-row:1}
+ html[data-layout="side"] .team.red{grid-column:1;grid-row:2}
+ html[data-layout="side"] .team.blue{grid-column:2;grid-row:2}
+ html[data-layout="side"] .score-area{height:100%;display:flex;align-items:center;justify-content:center;gap:0}
+ html[data-layout="side"] .team.red .score-area{padding-right:clamp(36px,4.5vw,62px)}
+ html[data-layout="side"] .team.blue .score-area{padding-left:clamp(36px,4.5vw,62px)}
+ html[data-layout="side"] .score-digits{width:100%;height:94%;max-height:none;min-width:0;align-self:center;flex:0 1 auto}
+ html[data-layout="side"] .score-digits.single-digit{width:72%}
+ /* Dos botones comparten la misma posición central; solo se muestra quien saca. */
+ html[data-layout="side"] .serve-btn{display:grid;position:absolute;top:50%;right:0;left:auto;transform:translate(50%,-50%);margin:0;width:clamp(36px,4vw,56px);height:clamp(36px,4vw,56px);z-index:3}
+ html[data-layout="side"] .team.blue .serve-btn{left:0;right:auto;transform:translate(-50%,-50%)}
+ html[data-layout="side"] .serve-btn:not(.active){visibility:hidden;pointer-events:none}
+ html[data-layout="side"] #stats-shared{grid-column:3;grid-row:2;height:94%;width:100%;justify-self:stretch;align-self:center;grid-template-rows:16% 42% 42%;border-radius:clamp(12px,2vw,30px)}
+ html[data-layout="side"] .stats-header{font-size:clamp(12px,1.6vw,24px)}
+ html[data-layout="side"] .stats-row{font-size:clamp(32px,12vh,128px)}
+}
+@media (orientation:landscape) and (max-height:450px){
+ html[data-layout="side"] .stats-header{font-size:clamp(11px,1.65vw,18px)}
+ html[data-layout="side"] .stats-row{font-size:clamp(30px,13vh,76px)}
+}
+/* El boton de cierre queda fijo y el resto del menu se desplaza por separado. */
+.menu-controls-scroll{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0}
+@media (orientation:landscape){
+ #modal .menu-shell{height:calc(94dvh - 24px)}
+ #modal .menu-controls{overflow:hidden;gap:6px;height:100%}
+ #modal .menu-controls-scroll{flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-right:2px}
+ #modal .menu-controls .closebtn{position:static;flex:0 0 36px;min-height:36px;background:#24282e;box-shadow:none}
+}
+@media (orientation:portrait){
+ /* En vertical, el formato horizontal 'lado a lado' usa la vista apilada estable. */
+ .layout-note{display:block}
+}
+
+@media (orientation:landscape){
+ #modal .menu-intro .style-setting{margin-top:8px}
+ #modal .menu-intro .layout-setting{margin-top:8px}
+}
+@media (orientation:landscape) and (max-width:510px){
+ #modal .menu-intro .layout-options{grid-template-columns:1fr}
+ #modal .menu-intro .style-options{grid-template-columns:1fr}
+}
+
+/* v2.4: mas espacio para los puntajes en el formato horizontal lado a lado.
+   No modifica los formatos apilados ni la vista vertical. */
+@media (orientation:landscape){
+ html[data-layout="side"] #scoreboard{
+   grid-template-columns:minmax(0,39fr) minmax(0,37fr) minmax(0,24fr);
+   column-gap:clamp(1px,.18vw,4px);
+   padding:0 .45vw .35vh;
+ }
+ /* Se reduce la reserva central de la pelota: ambos numeros ganan ancho. */
+ html[data-layout="side"] .team.red .score-area{padding-right:clamp(20px,2vw,35px)}
+ html[data-layout="side"] .team.blue .score-area{padding-left:clamp(20px,2vw,35px)}
+ html[data-layout="side"] .score-digits{
+   height:92%;
+   align-self:flex-start;
+ }
+ html[data-layout="side"] .score-digits.single-digit{width:79%}
+ /* La pelota queda entre los dos bloques sin invadir las cifras. */
+ html[data-layout="side"] .serve-btn{
+   width:clamp(35px,3.7vw,54px);
+   height:clamp(35px,3.7vw,54px);
+ }
+ /* Indicador de saque: solo aparece debajo del equipo que sirve. */
+ html[data-layout="side"] .score-area::after{
+   content:'';
+   display:block;
+   position:absolute;
+   left:50%;
+   bottom:5.7%;
+   transform:translateX(-50%);
+   width:68%;
+   height:clamp(4px,.85vh,9px);
+   border-radius:999px;
+   background:#76f343;
+   box-shadow:0 0 clamp(3px,.55vh,7px) rgba(118,243,67,.42);
+   opacity:0;
+   pointer-events:none;
+   z-index:1;
+ }
+ html[data-score-style="solid"][data-layout="side"] .score-area::after{left:calc(50% + 2.5vw)}
+ html[data-layout="side"] .team.serving .score-area::after{opacity:1}
+}
+/* BLE: indicador discreto, no altera dimensiones del marcador original */
+#ble-indicator{position:fixed;z-index:4;bottom:6px;right:8px;pointer-events:none;font-size:clamp(10px,1.5vw,13px);padding:3px 7px;color:#cbd0d8;background:#000b;border-radius:6px;border:1px solid #333;max-width:50vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#ble-indicator[data-state="ready"]{border-color:#4b8a65}
+#ble-indicator[data-state="scanning"]{border-color:#8b814d}
+#ble-indicator .selection-red{color:var(--red);font-weight:800}
+#ble-indicator .selection-blue{color:var(--blue);font-weight:800}
+.ble-section{border:1px solid #494d58;padding:10px;margin:10px 0;border-radius:10px;background:#1b1f26}
+.ble-section h3{margin:0 0 8px;font-size:16px}
+.ble-section p{margin:5px 0;font-size:12px;line-height:1.35}
+.ble-section .actions{margin:10px 0}
+.ble-section button{font-size:13px;padding:9px 6px}
+#ble-armed-toggle[aria-pressed="true"]{border-color:#79b985;background:#1d4930}
+</style>
+</head>
+<body>
+<main id="scoreboard" aria-label="Marcador electrónico de pádel">
+ <section id="topbar" aria-label="Información del partido">
+  <time class="meta-value" id="clock-now" role="button" tabindex="0" aria-label="Hora actual. Mantener pulsado para abrir el menú">--:--</time>
+  <span id="tiebreak-label" role="status" aria-live="polite"></span>
+  <time class="meta-value" id="elapsed-min" aria-label="Tiempo de partido, minutos y segundos">00:00</time>
+ </section>
+ <section class="team red" aria-label="Equipo rojo">
+  <div class="score-area" id="score-red" role="button" tabindex="0" aria-label="Sumar un punto al equipo rojo.">
+   <button class="serve-btn" id="serve-red" aria-label="Marcar saque para rojo" title="Saca rojo"><span class="ball" aria-hidden="true"></span></button>
+   <svg id="points-red" class="score-digits"></svg>
+  </div>
+
+ </section>
+ <section class="team blue" aria-label="Equipo azul">
+  <div class="score-area" id="score-blue" role="button" tabindex="0" aria-label="Sumar un punto al equipo azul.">
+   <button class="serve-btn" id="serve-blue" aria-label="Marcar saque para azul" title="Saca azul"><span class="ball" aria-hidden="true"></span></button>
+   <svg id="points-blue" class="score-digits"></svg>
+  </div>
+
+ </section>
+ <aside id="stats-shared" aria-label="Juegos y sets de ambos equipos">
+  <div class="stats-header" aria-hidden="true"><span>JUEGO</span><span>SETS</span></div>
+  <div class="stats-row stats-red" aria-label="Rojo"><span id="games-red" class="stat-number" aria-label="Juegos del rojo">0</span><span id="sets-red" class="stat-number" aria-label="Sets del rojo">0</span></div>
+  <div class="stats-row stats-blue" aria-label="Azul"><span id="games-blue" class="stat-number" aria-label="Juegos del azul">0</span><span id="sets-blue" class="stat-number" aria-label="Sets del azul">0</span></div>
+ </aside>
+</main>
+<div id="status" aria-live="polite"></div>
+<div id="ble-indicator" data-state="offline" aria-live="polite">BLE: desconectado · rojo</div>
+<dialog id="modal" aria-label="Controles del marcador">
+ <div class="menu-shell">
+  <div class="menu-intro">
+   <h2>Controles del marcador</h2>
+   <p>Toca el puntaje para sumar. Mantén pulsado el puntaje rojo o azul para quitar su último punto. Para abrir este menú, mantén pulsada la hora. Toca la pelota para indicar quién saca.</p>
+   <div class="hint">Teclado: <strong>1</strong> suma al rojo, <strong>2</strong> al azul, <strong>Q</strong> marca saque rojo, <strong>W</strong> marca saque azul, <strong>Z</strong> deshace, <strong>M</strong> abre el menú.</div>
+   <div class="style-setting" aria-label="Estilo de números">
+    <div class="style-heading">Estilo de números</div>
+    <div class="style-options" role="group" aria-label="Elegir estilo para el puntaje principal">
+     <button type="button" id="style-led" class="style-option" aria-pressed="true">LED mejorado</button>
+     <button type="button" id="style-solid" class="style-option" aria-pressed="false">Números sólidos</button>
+    </div>
+   </div>
+   <div class="layout-setting" aria-label="Distribución del marcador">
+    <div class="layout-heading">Formato del marcador</div>
+    <div class="layout-options" role="group" aria-label="Elegir distribución horizontal">
+     <button type="button" id="layout-classic" class="layout-option" aria-pressed="false">Apilado clásico</button>
+     <button type="button" id="layout-full" class="layout-option" aria-pressed="true">Apilado completo</button>
+     <button type="button" id="layout-side" class="layout-option" aria-pressed="false">Lado a lado</button>
+    </div>
+    <div class="layout-note">En vertical se mantiene la distribución apilada.</div>
+   </div>
+  </div>
+  <div class="menu-controls">
+   <div class="menu-controls-scroll">
+   <section class="ble-section" aria-label="Receptor Bluetooth del reloj">
+     <h3>Control FitPro LP715(D)</h3>
+     <p id="ble-status">BLE: desconectado</p>
+     <p>◀ Deshacer · ⏯ Cambiar equipo · ▶ Sumar punto</p>
+     <p id="ble-selected">Equipo seleccionado: Rojo</p>
+     <p id="ble-last">Último botón recibido: ninguno</p>
+     <div class="actions">
+       <button type="button" id="ble-connect">Buscar WATCH</button>
+       <button type="button" id="ble-disconnect">Desconectar</button>
+       <button type="button" id="ble-armed-toggle" aria-pressed="false">Activar control</button>
+       <button type="button" id="ble-switch-team">Cambiar equipo</button>
+     </div>
+     <p>Por seguridad, el control comienza desactivado. No se activará automáticamente el modo cámara. Los clics simples/dobles del sensor aún no están identificados como eventos BLE.</p>
+   </section>
+   <div class="actions">
+    <button id="add-red">+ Punto rojo</button><button id="add-blue">+ Punto azul</button>
+    <button id="undo">↶ Deshacer punto</button><button id="demo">Cargar ejemplo</button>
+    <button id="reset">Nuevo partido</button><button id="fullscreen" class="primary">Pantalla completa</button>
+    <button id="demo-tiebreak">Probar tie-break 6–6</button>
+   </div>
+   <div id="rules-pill">Modo: <strong>punto de oro</strong> · sin ventaja</div>
+   </div>
+   <button class="closebtn" id="close">Volver al marcador</button>
+  </div>
+ </div>
+</dialog>
+<dialog id="reset-confirm" aria-label="Confirmar nuevo partido">
+ <h2>¿Iniciar un nuevo partido?</h2>
+ <p>Se reiniciarán los puntos, juegos, sets, saque, tiempo y el historial de deshacer.</p>
+ <div class="actions">
+  <button id="reset-cancel">Cancelar</button>
+  <button id="reset-accept" class="primary">Iniciar nuevo</button>
+ </div>
+</dialog>
+<script>
+'use strict';
+const SVG_NS='http://www.w3.org/2000/svg';
+const paths={a:'20,4 80,4 90,14 80,24 20,24 10,14',b:'84,28 94,18 100,28 100,73 92,83 84,73',c:'84,98 92,88 100,98 100,144 92,154 84,144',d:'20,148 80,148 90,158 80,168 20,168 10,158',e:'8,88 16,98 16,144 8,154 0,144 0,98',f:'8,18 16,28 16,73 8,83 0,73 0,28',g:'20,76 80,76 90,86 80,96 20,96 10,86'};
+const map={'0':'abcdef','1':'bc','2':'abged','3':'abgcd','4':'fgbc','5':'afgcd','6':'afgecd','7':'abc','8':'abcdefg','9':'abcdfg','A':'abcefg','-':'g'};
+// El estilo se guarda independiente del partido: iniciar uno nuevo no lo altera.
+// Formato visual independiente de los datos del partido y del estilo de cifras.
+const SCORE_LAYOUT_KEY='padel_score_layout_v1';
+let scoreLayout='full';
+try{
+ const savedLayout=localStorage.getItem(SCORE_LAYOUT_KEY);
+ if(['classic','full','side'].includes(savedLayout))scoreLayout=savedLayout;
+}catch(e){}
+document.documentElement.dataset.layout=scoreLayout;
+function selectScoreLayout(layout){
+ if(!['classic','full','side'].includes(layout))return;
+ scoreLayout=layout;
+ document.documentElement.dataset.layout=layout;
+ for(const option of ['classic','full','side']){
+  document.getElementById('layout-'+option).setAttribute('aria-pressed',String(option===layout));
+ }
+ try{localStorage.setItem(SCORE_LAYOUT_KEY,layout)}catch(e){}
+ // Los dígitos SVG se recalculan por layout, sin tocar el resultado del partido.
+ draw('points-red',pointText(0));draw('points-blue',pointText(1));
+}
+const SCORE_STYLE_KEY='padel_score_style_v1';
+let scoreStyle='led';
+try{if(localStorage.getItem(SCORE_STYLE_KEY)==='solid')scoreStyle='solid'}catch(e){}
+document.documentElement.dataset.scoreStyle=scoreStyle;
+function selectScoreStyle(style){
+ if(style!=='led'&&style!=='solid')return;
+ scoreStyle=style;
+ document.documentElement.dataset.scoreStyle=style;
+ el('style-led').setAttribute('aria-pressed',String(style==='led'));
+ el('style-solid').setAttribute('aria-pressed',String(style==='solid'));
+ try{localStorage.setItem(SCORE_STYLE_KEY,style)}catch(e){}
+ // Repintar solo la tipografía; no modificar puntuación, saque ni cronómetro.
+ draw('points-red',pointText(0));draw('points-blue',pointText(1));
+}
+function draw(id,val){
+ const svg=document.getElementById(id),s=String(val);
+ // Los puntos usan dos posiciones fijas: 0 ocupa siempre la derecha (como 15, 30, 40).
+ const pointDigits=id.startsWith('points-');
+ const side=pointDigits&&scoreLayout==='side'&&window.matchMedia('(orientation: landscape)').matches;
+ const cells=pointDigits?(side?Math.max(1,s.length):Math.max(2,s.length)):s.length;
+ const w=cells*106+(cells-1)*4;
+ const offset=pointDigits&&s.length===1&&!side?110:0;
+ svg.classList.toggle('single-digit',side&&s.length===1);
+ // El modo lado a lado utiliza SVG escalable en altura para aprovechar la tablet.
+ const fullHeightSolid=pointDigits&&scoreStyle==='solid'&&window.matchMedia('(orientation: landscape)').matches;
+ const view=fullHeightSolid?(side?`0 29 ${w} 129`:`38 36 ${w-42} 120`):`0 0 ${w} 172`;
+ svg.setAttribute('viewBox',view);
+ svg.setAttribute('preserveAspectRatio',side?'none':'xMidYMid meet');
+ svg.textContent='';
+ if(pointDigits&&scoreStyle==='solid'){
+  const node=document.createElementNS(SVG_NS,'text');
+  node.setAttribute('x',String(w-12));node.setAttribute('y','153');
+  node.setAttribute('font-size','159');node.setAttribute('text-anchor','end');
+  node.textContent=s;svg.appendChild(node);return;
+ }
+ for(let i=0;i<s.length;i++){
+  const g=document.createElementNS(SVG_NS,'g');g.setAttribute('transform',`translate(${offset+i*110} 0)`);
+  for(const k of (map[s[i]]||'')){
+   const p=document.createElementNS(SVG_NS,'polygon');p.setAttribute('points',paths[k]);p.setAttribute('fill','currentColor');g.appendChild(p);
+  }
+  svg.appendChild(g);
+ }
+}
+const blank=()=>({points:[0,0],games:[0,0],sets:[0,0],tiebreak:false,tiebreakStarter:null,ended:false,history:[],server:0,startTs:Date.now()});
+// Número de puntos YA disputados en el tie-break: primer saque (1 punto), después turnos de 2.
+function servingPairForTiebreak(starter,played){
+ if(played===0)return starter;
+ return Math.floor((played-1)/2)%2===0 ? 1-starter : starter;
+}
+function starterFromCurrentServer(played,currentServer){
+ return servingPairForTiebreak(0,played)===currentServer ? 0 : 1;
+}
+let s;
+try{
+ const loaded=JSON.parse(localStorage.getItem('padel_scoreboard_v08')||localStorage.getItem('padel_scoreboard_v03')||'null');
+ s=loaded&&Array.isArray(loaded.points)&&Array.isArray(loaded.games)&&Array.isArray(loaded.sets)?{...blank(),...loaded}:blank();
+ if(s.tiebreak&&s.tiebreakStarter!==0&&s.tiebreakStarter!==1){
+  s.tiebreakStarter=starterFromCurrentServer(s.points[0]+s.points[1],s.server);
+  s.server=servingPairForTiebreak(s.tiebreakStarter,s.points[0]+s.points[1]);
+ }
+}catch{ s=blank() }
+const el=(id)=>document.getElementById(id);
+const deepCopy=(x)=>JSON.parse(JSON.stringify(x));
+function save(){try{localStorage.setItem('padel_scoreboard_v08',JSON.stringify(s))}catch(e){}}
+function pointText(t){
+ if(s.tiebreak)return String(s.points[t]);
+ const p=s.points[t],o=s.points[1-t];
+ if(p<=2)return ['0','15','30'][p];
+ return '40';
+}
+function updateClock(){
+ const now=new Date();
+ const pad=(n)=>String(n).padStart(2,'0');
+ el('clock-now').textContent=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
+ // Tiempo calculado desde la hora de inicio, sin acumular errores por intervalos suspendidos.
+ const seconds=Math.max(0,Math.floor((Date.now()-s.startTs)/1000));
+ el('elapsed-min').textContent=`${pad(Math.floor(seconds/60))}:${pad(seconds%60)}`;
+}
+function updateServe(){
+ document.querySelector('.team.red').classList.toggle('serving',s.server===0);
+ document.querySelector('.team.blue').classList.toggle('serving',s.server===1);
+ el('serve-red').classList.toggle('active',s.server===0);
+ el('serve-blue').classList.toggle('active',s.server===1);
+ el('serve-red').setAttribute('aria-label',s.server===0?'Rojo está sacando':'Marcar saque para rojo');
+ el('serve-blue').setAttribute('aria-label',s.server===1?'Azul está sacando':'Marcar saque para azul');
+}
+function update(){
+ const tb=el('tiebreak-label');
+ const goldenPoint=!s.tiebreak&&!s.ended&&s.points[0]>=3&&s.points[1]>=3;
+ tb.textContent=s.tiebreak?'TIE-BREAK':goldenPoint?'PUNTO DE ORO':'';
+ tb.classList.toggle('visible',s.tiebreak||goldenPoint);
+ tb.classList.toggle('is-tiebreak',!!s.tiebreak);
+ draw('points-red',pointText(0));draw('points-blue',pointText(1));
+ el('games-red').textContent=String(s.games[0]);el('games-blue').textContent=String(s.games[1]);
+ el('sets-red').textContent=String(s.sets[0]);el('sets-blue').textContent=String(s.sets[1]);
+ el('undo').disabled=s.history.length===0;
+ updateServe();
+ updateClock();
+ el('score-red').setAttribute('aria-label',`Rojo: ${pointText(0)} puntos, ${s.games[0]} juegos, ${s.sets[0]} sets. Tocar para sumar, mantener pulsado para quitar un punto al rojo`);
+ el('score-blue').setAttribute('aria-label',`Azul: ${pointText(1)} puntos, ${s.games[1]} juegos, ${s.sets[1]} sets. Tocar para sumar, mantener pulsado para quitar un punto al azul`);
+ save();
+}
+let statusTimer;
+let replaying=false;
+function notice(message){
+ if(replaying)return;
+ const n=el('status');n.textContent=message;n.classList.add('visible');
+ clearTimeout(statusTimer);statusTimer=setTimeout(()=>n.classList.remove('visible'),2400);
+}
+// Puente BLE independiente. La puntuación original sigue funcionando táctil y por teclado.
+let bleSelectedTeam=0;
+let bleArmed=false;
+let bleConnected=false;
+let bleLastAction='';
+let bleLastAt=0;
+function bleUpdateUi(state){
+ const line=el('ble-indicator');
+ const color=bleSelectedTeam===0?'Rojo':'Azul';
+ line.dataset.state=state|| (bleConnected?'ready':'offline');
+ line.innerHTML='BLE: '+(bleConnected?'conectado':'desconectado')+' · <span class="selection-'+(bleSelectedTeam?'blue':'red')+'">'+color+'</span>'+(bleArmed?' · ON':' · OFF');
+ el('ble-selected').textContent='Equipo seleccionado: '+color;
+ el('ble-armed-toggle').textContent=bleArmed?'Desactivar control':'Activar control';
+ el('ble-armed-toggle').setAttribute('aria-pressed',String(bleArmed));
+}
+function bleSelectTeam(){
+ bleSelectedTeam=1-bleSelectedTeam;
+ bleUpdateUi();
+ notice('Reloj: seleccionado '+(bleSelectedTeam?'AZUL':'ROJO'));
+}
+function bleToggleArmed(){
+ if(!bleConnected){notice('Conecta WATCH antes de activar el control');return}
+ bleArmed=!bleArmed;
+ bleUpdateUi();
+ notice('Receptor BLE '+(bleArmed?'ACTIVADO':'DESACTIVADO'));
+}
+// Invocado desde Java únicamente cuando se recibe el código 0x0A, 0x0B u 0x0C.
+window.padelBleCommand=function(action){
+ const labels={previous:'Anterior',pause:'Play/Pausa',next:'Siguiente'};
+ const stamp=new Date().toLocaleTimeString('es-CL',{hour12:false});
+ el('ble-last').textContent='Último botón recibido: '+(labels[action]||action)+' ('+stamp+')';
+ if(!bleArmed||!bleConnected)return;
+ if(el('modal').open||el('reset-confirm').open)return;
+ const now=Date.now();
+ // Anti-rebote limitado a repeticiones del MISMO comando dentro de 350 ms.
+ // Un cambio de control no se retrasa; no se interpreta un doble clic del sensor.
+ if(bleLastAction===action&&now-bleLastAt<350)return;
+ bleLastAction=action;bleLastAt=now;
+ if(action==='previous'){undo();notice('Reloj: deshacer último punto')}
+ else if(action==='pause'){bleSelectTeam()}
+ else if(action==='next'){
+  if(!s.ended){addPoint(bleSelectedTeam);notice('Reloj: +1 '+(bleSelectedTeam?'AZUL':'ROJO'))}
+ }
+};
+window.padelBleStatus=function(state,message){
+ bleConnected=(state==='ready');
+ if(state!=='ready')bleArmed=false;
+ el('ble-status').textContent='BLE: '+message;
+ bleUpdateUi(state);
+};
+el('ble-connect').onclick=()=>{
+ if(window.PadelBLE)window.PadelBLE.findWatch();
+ else notice('El Bluetooth solo está disponible en la APK Android');
+};
+el('ble-disconnect').onclick=()=>{if(window.PadelBLE)window.PadelBLE.disconnect()};
+el('ble-armed-toggle').onclick=bleToggleArmed;
+el('ble-switch-team').onclick=bleSelectTeam;
+bleUpdateUi('offline');
+// Cada punto conserva el estado previo y el equipo al que se atribuyó.
+function pushHistory(team){
+ const {history,...snapshot}=s;
+ delete snapshot._scoredBy;
+ s.history.push({...deepCopy(snapshot),_scoredBy:team});
+ if(s.history.length>200)s.history.shift();
+}
+function withoutScorer(snapshot){const {_scoredBy,...state}=snapshot;return state}
+// Compatibilidad con los historiales de la versión anterior, sin etiqueta de equipo.
+function scorerOf(before,after){
+ if(before._scoredBy===0||before._scoredBy===1)return before._scoredBy;
+ for(const field of ['sets','games','points']){
+  for(let team=0;team<=1;team++){
+   if(after[field][team]>before[field][team])return team;
+  }
+ }
+ return null;
+}
+function setServer(team){
+ s.server=team;
+ if(s.tiebreak){
+  const played=s.points[0]+s.points[1];
+  // La corrección manual mantiene coherente la rotación de los próximos servicios.
+  s.tiebreakStarter=starterFromCurrentServer(played,team);
+ }
+ update();notice(team===0?'Saca rojo':'Saca azul');
+}
+function awardSet(team){
+ s.sets[team]++;s.games=[0,0];s.points=[0,0];s.tiebreak=false;s.tiebreakStarter=null;
+ if(s.sets[team]>=2){s.ended=true;notice('Partido terminado · '+(team===0?'Rojo':'Azul')+' gana')}
+}
+function awardGame(team,viaTiebreak=false){
+ s.games[team]++;s.points=[0,0];
+ if(viaTiebreak){
+  // FIP: el siguiente set lo inicia la pareja que NO sirvió el primer punto del tie-break.
+  s.server=1-s.tiebreakStarter;
+  awardSet(team);
+  return;
+ }
+ // Fuera del tie-break, el saque alterna una vez por game.
+ s.server=1-s.server;
+ const a=s.games[team],b=s.games[1-team];
+ if(a>=6&&a-b>=2){awardSet(team);return}
+ if(a===6&&b===6){
+  s.tiebreak=true;
+  s.tiebreakStarter=s.server;
+  notice('Tie-break');
+ }
+}
+function addPoint(team,render=true){
+ if(s.ended){notice('Partido terminado. Usa nuevo partido');return}
+ pushHistory(team);
+ if(s.tiebreak){
+  s.points[team]++;
+  if(s.points[team]>=7&&s.points[team]-s.points[1-team]>=2){
+   awardGame(team,true);
+  }else{
+   s.server=servingPairForTiebreak(s.tiebreakStarter,s.points[0]+s.points[1]);
+  }
+ }else{
+  s.points[team]++;
+  // Punto de oro: al llegar a 40-40, el punto siguiente decide el game.
+  if(s.points[team]>=4)awardGame(team);
+ }
+ if(render){
+  update();
+  const area=el('score-'+(team?'blue':'red'));
+  area.classList.add('flash');setTimeout(()=>area.classList.remove('flash'),180);
+ }
+}
+function undo(){
+ if(!s.history.length){notice('No hay puntos para deshacer');return}
+ const old=s.history.pop(),history=s.history;
+ s={...withoutScorer(old),history};
+ update();
+ notice('Último punto deshecho');
+}
+function undoTeam(team){
+ if(!s.history.length){notice('No hay puntos para restar');return}
+ const history=s.history;
+ const scorers=history.map((before,i)=>scorerOf(before,i+1<history.length?history[i+1]:s));
+ const index=scorers.lastIndexOf(team);
+ if(index<0){notice('No hay puntos del '+(team===0?'rojo':'azul')+' para restar');return}
+ // No arriesgar el resultado si existen eventos antiguos sin poder identificarlos.
+ const remaining=scorers.slice(index+1);
+ if(remaining.some(x=>x===null)){
+  notice('No es posible corregir ese punto del historial anterior');return;
+ }
+ const base=withoutScorer(history[index]);
+ const past=deepCopy(history.slice(0,index));
+ s={...deepCopy(base),history:past};
+ replaying=true;
+ try{
+  for(const scorer of remaining)addPoint(scorer,false);
+ }finally{replaying=false}
+ update();
+ notice('Punto '+(team===0?'rojo':'azul')+' restado');
+}
+// Confirmaciones HTML compatibles con WebView; evitar confirm() de JavaScript.
+let pendingMode=null;
+function askReplacement(mode){
+ pendingMode=mode;
+ const data={
+  reset:['¿Iniciar un nuevo partido?','Se reiniciarán los puntos, juegos, sets, saque, tiempo y el historial de deshacer.','Iniciar nuevo'],
+  demo:['¿Cargar partido de ejemplo?','Reemplazará el marcador del partido actual.','Cargar ejemplo'],
+  tiebreak:['¿Cargar tie-break de prueba?','Reemplazará el marcador del partido actual por un tie-break 6–6.','Probar tie-break']
+ }[mode];
+ if(!data)return;
+ el('reset-confirm').querySelector('h2').textContent=data[0];
+ el('reset-confirm').querySelector('p').textContent=data[1];
+ el('reset-accept').textContent=data[2];
+ el('modal').close();
+ el('reset-confirm').showModal();
+}
+function askReset(){askReplacement('reset')}
+function reset(){
+ s=blank(); // Estado desde cero: puntos, juegos, sets, saque, tiempo, tie-break, historial y finalización.
+ update(); // Incluye persistencia inmediata en localStorage.
+ el('reset-confirm').close();
+ notice('Nuevo partido iniciado');
+}
+function cancelReset(){
+ pendingMode=null;
+ el('reset-confirm').close();
+ openMenu();
+}
+function demo(){s=blank();s.points=[3,3];s.games=[4,3];s.sets=[1,0];s.server=1;update();if(el('modal').open)el('modal').close();notice('Ejemplo cargado')}
+function demoTiebreak(){
+ s=blank();s.games=[6,6];s.tiebreak=true;s.tiebreakStarter=0;s.server=0;
+ update();if(el('modal').open)el('modal').close();notice('Tie-break: saca rojo el primer punto');
+}
+function confirmReplacement(){
+ const mode=pendingMode;
+ pendingMode=null;
+ if(mode==='reset')reset();
+ else if(mode==='demo'){el('reset-confirm').close();demo()}
+ else if(mode==='tiebreak'){el('reset-confirm').close();demoTiebreak()}
+}
+function openMenu(){if(!el('modal').open)el('modal').showModal()}
+for (const [t,id] of [[0,'score-red'],[1,'score-blue']]){
+ const node=el(id);
+ const LONG_PRESS_MS=650;
+ let start=null,held=false,timeout=null,pointerId=null;
+ const cancel=()=>{clearTimeout(timeout);start=null;pointerId=null};
+ node.addEventListener('pointerdown',(e)=>{
+  if(e.target.closest('.serve-btn'))return;
+  if(e.isPrimary===false||e.button!==0)return;
+  if(pointerId!==null)return;
+  held=false;start=Date.now();pointerId=e.pointerId;
+  clearTimeout(timeout);
+  timeout=setTimeout(()=>{
+   if(start===null||held)return;
+   held=true;undoTeam(t);
+  },LONG_PRESS_MS);
+ });
+ node.addEventListener('pointerup',(e)=>{
+  if(e.target.closest('.serve-btn')||pointerId!==e.pointerId)return;
+  const duration=start===null?0:Date.now()-start;
+  clearTimeout(timeout);
+  if(!held&&start!==null&&!el('modal').open){
+   if(duration>=LONG_PRESS_MS)undoTeam(t);
+   else addPoint(t);
+  }
+  start=null;pointerId=null;
+ });
+ node.addEventListener('pointercancel',cancel);
+ node.addEventListener('pointerleave',(e)=>{
+  if(e.pointerType==='mouse'&&pointerId===e.pointerId)cancel();
+ });
+ node.addEventListener('contextmenu',(e)=>{
+  if(e.target.closest('.serve-btn'))return;
+  e.preventDefault();clearTimeout(timeout);
+  if(!held&&start!==null){held=true;undoTeam(t)}
+  start=null;pointerId=null;
+ });
+ node.addEventListener('keydown',(e)=>{
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();addPoint(t)}
+ });
+}
+el('layout-classic').onclick=()=>selectScoreLayout('classic');
+el('layout-full').onclick=()=>selectScoreLayout('full');
+el('layout-side').onclick=()=>selectScoreLayout('side');
+selectScoreLayout(scoreLayout);
+el('style-led').onclick=()=>selectScoreStyle('led');
+el('style-solid').onclick=()=>selectScoreStyle('solid');
+selectScoreStyle(scoreStyle);
+function handleServeBall(event,team){
+ event.stopPropagation();
+ // En lado a lado existe una única pelota visible y tocarla alterna el saque.
+ if(scoreLayout==='side'&&window.matchMedia('(orientation: landscape)').matches)setServer(1-s.server);
+ else setServer(team);
+}
+el('serve-red').onclick=(e)=>handleServeBall(e,0);
+el('serve-blue').onclick=(e)=>handleServeBall(e,1);
+el('add-red').onclick=()=>{addPoint(0);el('modal').close()};
+el('add-blue').onclick=()=>{addPoint(1);el('modal').close()};
+el('undo').onclick=()=>{undo();el('modal').close()};
+el('demo').onclick=()=>askReplacement('demo');
+el('demo-tiebreak').onclick=()=>askReplacement('tiebreak');
+el('reset').onclick=askReset;
+el('reset-accept').onclick=confirmReplacement;
+el('reset-cancel').onclick=cancelReset;
+el('reset-confirm').addEventListener('cancel',(event)=>{event.preventDefault();cancelReset()});
+el('fullscreen').onclick=()=>{el('modal').close();document.documentElement.requestFullscreen?.().catch(()=>notice('Usa pantalla completa desde el navegador'))};
+el('close').onclick=()=>el('modal').close();
+// Menú completamente oculto. Pulsación larga en el reloj superior izquierdo.
+(function bindClockMenu(){
+ const node=el('clock-now'),LONG_PRESS_MS=650;
+ let timer=null,activePointer=null,wasOpened=false;
+ const clear=()=>{clearTimeout(timer);timer=null;activePointer=null};
+ node.addEventListener('pointerdown',(e)=>{
+  if(e.isPrimary===false||e.button!==0||activePointer!==null)return;
+  activePointer=e.pointerId;wasOpened=false;
+  timer=setTimeout(()=>{
+   if(activePointer===null)return;
+   wasOpened=true;openMenu();
+  },LONG_PRESS_MS);
+ });
+ node.addEventListener('pointerup',(e)=>{if(activePointer===e.pointerId)clear()});
+ node.addEventListener('pointercancel',clear);
+ node.addEventListener('pointerleave',(e)=>{if(e.pointerType==='mouse'&&activePointer===e.pointerId)clear()});
+ node.addEventListener('contextmenu',(e)=>{
+  e.preventDefault();
+  if(activePointer!==null&&!wasOpened){wasOpened=true;openMenu()}
+  clear();
+ });
+ node.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openMenu()}});
+})();
+window.addEventListener('keydown',(e)=>{
+ // No se puede cambiar el marcador mientras se confirma el inicio de un partido.
+ if(el('reset-confirm').open)return;
+ if(el('modal').open){if(e.key==='Escape')el('modal').close();return}
+ if(e.ctrlKey||e.metaKey||e.altKey)return;
+ const k=e.key.toLowerCase();
+ if(k==='1')addPoint(0); else if(k==='2')addPoint(1); else if(k==='q')setServer(0); else if(k==='w')setServer(1); else if(k==='z')undo(); else if(k==='m')openMenu();
+});
+update();
+// La orientación puede cambiar mientras el partido sigue en curso.
+window.addEventListener('resize',()=>{
+ draw('points-red',pointText(0));draw('points-blue',pointText(1));
+});
+setInterval(updateClock,1000);
+setTimeout(()=>notice('Toque: sumar · mantener puntaje: restar · mantener hora: menú'),300);
+</script>
+</body>
+</html>
