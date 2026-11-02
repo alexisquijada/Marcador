@@ -2,14 +2,14 @@ plugins {
     id 'com.android.application'
 }
 android {
-    namespace 'cl.marcadorpadel.ble'
+    namespace 'cl.marcadorpadel.sn30'
     compileSdk 35
     defaultConfig {
-        applicationId 'cl.marcadorpadel.ble'
+        applicationId 'cl.marcadorpadel.sn30'
         minSdk 23
         targetSdk 29
-        versionCode 25
-        versionName '2.5-BLE'
+        versionCode 28
+        versionName '2.8-SN30-SELECT-RESTA'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

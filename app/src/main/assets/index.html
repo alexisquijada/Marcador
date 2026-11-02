@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#000000">
-<title>Marcador de Pádel — BLE v2.5</title>
+<title>Marcador de Pádel — 8BitDo SN30 v2.8</title>
 <style>
 :root {
   color-scheme: dark;
@@ -321,18 +321,35 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
  html[data-score-style="solid"][data-layout="side"] .score-area::after{left:calc(50% + 2.5vw)}
  html[data-layout="side"] .team.serving .score-area::after{opacity:1}
 }
-/* BLE: indicador discreto, no altera dimensiones del marcador original */
-#ble-indicator{position:fixed;z-index:4;bottom:6px;right:8px;pointer-events:none;font-size:clamp(10px,1.5vw,13px);padding:3px 7px;color:#cbd0d8;background:#000b;border-radius:6px;border:1px solid #333;max-width:50vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-#ble-indicator[data-state="ready"]{border-color:#4b8a65}
-#ble-indicator[data-state="scanning"]{border-color:#8b814d}
-#ble-indicator .selection-red{color:var(--red);font-weight:800}
-#ble-indicator .selection-blue{color:var(--blue);font-weight:800}
-.ble-section{border:1px solid #494d58;padding:10px;margin:10px 0;border-radius:10px;background:#1b1f26}
-.ble-section h3{margin:0 0 8px;font-size:16px}
-.ble-section p{margin:5px 0;font-size:12px;line-height:1.35}
-.ble-section .actions{margin:10px 0}
-.ble-section button{font-size:13px;padding:9px 6px}
-#ble-armed-toggle[aria-pressed="true"]{border-color:#79b985;background:#1d4930}
+/* SN30: selección del equipo activo sin confundirlo con el equipo que saca. */
+.team.pad-selected .score-area::before{
+ content:'●';position:absolute;top:clamp(3px,.7vh,9px);left:clamp(3px,.6vw,10px);
+ color:currentColor;font-size:clamp(16px,2.2vw,26px);line-height:1;
+ pointer-events:none;z-index:2;text-shadow:0 0 5px currentColor
+}
+#pad-target{position:fixed;z-index:4;bottom:6px;right:8px;pointer-events:none;
+ font-size:clamp(10px,1.5vw,13px);padding:3px 8px;font-weight:700;
+ color:#fff;background:#000d;border-radius:6px;border:1px solid #555;
+ white-space:nowrap
+}
+#pad-target[data-team="red"]{border-color:var(--red);color:var(--red)}
+#pad-target[data-team="blue"]{border-color:var(--blue);color:var(--blue)}
+/* SN30: indicador de conexión y bloqueo. */
+#pad-indicator{position:fixed;z-index:4;bottom:6px;left:8px;pointer-events:none;font-size:clamp(10px,1.5vw,13px);padding:3px 7px;color:#cbd0d8;background:#000b;border-radius:6px;border:1px solid #333;max-width:48vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#pad-indicator[data-state="armed"]{border-color:#4b8a65;color:#abf0c1}
+#pad-indicator[data-state="locked"]{border-color:#e4aa4b;color:#ffde9d}
+#pad-indicator[data-state="ready"]{border-color:#6987be}
+.pad-section{border:1px solid #55769b;padding:10px;margin:4px 0 9px;border-radius:10px;background:#16212d}
+.pad-section h3{margin:0 0 8px;font-size:16px}
+.pad-section p{margin:5px 0;font-size:12px;line-height:1.4}
+.pad-section .actions{margin:8px 0}
+.pad-section button{font-size:13px;padding:9px 6px}
+#pad-armed-toggle[aria-pressed="true"]{border-color:#79b985;background:#1d4930}
+.pad-mapping{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:8px 0}
+.pad-mapping button{white-space:normal;text-align:left}
+.pad-mapping button[data-learning="true"]{border-color:#ffe08a;background:#614b1f}
+.pad-mapping button:focus-visible{outline:2px solid #ffe08a}
+
 </style>
 </head>
 <body>
@@ -363,7 +380,8 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
  </aside>
 </main>
 <div id="status" aria-live="polite"></div>
-<div id="ble-indicator" data-state="offline" aria-live="polite">BLE: desconectado · rojo</div>
+<div id="pad-indicator" data-state="offline" aria-live="polite">SN30: desconectado · OFF</div>
+<div id="pad-target" data-team="red" aria-live="polite">SELECCIONADO: ROJO</div>
 <dialog id="modal" aria-label="Controles del marcador">
  <div class="menu-shell">
   <div class="menu-intro">
@@ -389,19 +407,23 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
   </div>
   <div class="menu-controls">
    <div class="menu-controls-scroll">
-   <section class="ble-section" aria-label="Receptor Bluetooth del reloj">
-     <h3>Control FitPro LP715(D)</h3>
-     <p id="ble-status">BLE: desconectado</p>
-     <p>◀ Deshacer · ⏯ Cambiar equipo · ▶ Sumar punto</p>
-     <p id="ble-selected">Equipo seleccionado: Rojo</p>
-     <p id="ble-last">Último botón recibido: ninguno</p>
+   <section class="pad-section" aria-label="Control Bluetooth 8BitDo SN30">
+     <h3>Control 8BitDo SN30</h3>
+     <p id="pad-status">SN30: esperando conexión desde Ajustes de Android</p>
+     <p id="pad-team-status">Equipo seleccionado: ROJO</p>
+     <p id="pad-last">Último botón: ninguno</p>
      <div class="actions">
-       <button type="button" id="ble-connect">Buscar WATCH</button>
-       <button type="button" id="ble-disconnect">Desconectar</button>
-       <button type="button" id="ble-armed-toggle" aria-pressed="false">Activar control</button>
-       <button type="button" id="ble-switch-team">Cambiar equipo</button>
+       <button type="button" id="pad-armed-toggle" aria-pressed="false">Activar SN30</button>
+       <button type="button" id="pad-reset-mapping">Restablecer botones</button>
      </div>
-     <p>Por seguridad, el control comienza desactivado. No se activará automáticamente el modo cámara. Los clics simples/dobles del sensor aún no están identificados como eventos BLE.</p>
+     <p>Botones asignados (toca una acción y después pulsa su botón en el SN30):</p>
+     <div class="pad-mapping">
+       <button type="button" id="pad-map-add">Sumar seleccionado: X</button>
+       <button type="button" id="pad-map-subtract">Restar seleccionado: B</button>
+       <button type="button" id="pad-map-lock">Bloquear: Y</button>
+       <button type="button" id="pad-map-select">Cambiar equipo: SELECT</button>
+     </div>
+     <p id="pad-help">SELECT cambia el equipo seleccionado (ROJO/AZUL), sin alterar el saque. X suma un punto al seleccionado; B descuenta el último punto anotado de ese equipo (usando el historial); Y bloquea/desbloquea. El botón A queda libre. Al abrir la app el SN30 comienza desactivado. Empareja desde Ajustes de Android &gt; Bluetooth. Puedes reasignar los botones desde este menú.</p>
    </section>
    <div class="actions">
     <button id="add-red">+ Punto rojo</button><button id="add-blue">+ Punto azul</button>
@@ -557,64 +579,129 @@ function notice(message){
  const n=el('status');n.textContent=message;n.classList.add('visible');
  clearTimeout(statusTimer);statusTimer=setTimeout(()=>n.classList.remove('visible'),2400);
 }
-// Puente BLE independiente. La puntuación original sigue funcionando táctil y por teclado.
-let bleSelectedTeam=0;
-let bleArmed=false;
-let bleConnected=false;
-let bleLastAction='';
-let bleLastAt=0;
-function bleUpdateUi(state){
- const line=el('ble-indicator');
- const color=bleSelectedTeam===0?'Rojo':'Azul';
- line.dataset.state=state|| (bleConnected?'ready':'offline');
- line.innerHTML='BLE: '+(bleConnected?'conectado':'desconectado')+' · <span class="selection-'+(bleSelectedTeam?'blue':'red')+'">'+color+'</span>'+(bleArmed?' · ON':' · OFF');
- el('ble-selected').textContent='Equipo seleccionado: '+color;
- el('ble-armed-toggle').textContent=bleArmed?'Desactivar control':'Activar control';
- el('ble-armed-toggle').setAttribute('aria-pressed',String(bleArmed));
+// Control gamepad HID SN30. Emparejamiento en Ajustes de Android.
+// No requiere permisos de Bluetooth ni root; usa los eventos HID estándar.
+// Nueva clave: no reutilizar mapeos de v2.7 porque X/B cambiaron de función.
+const PAD_MAPPING_KEY='padel_sn30_mapping_v3';
+const PAD_ACTIONS=['add','subtract','lock','select'];
+const PAD_DEFAULT_MAP={add:99,subtract:97,lock:100,select:109};
+const PAD_ACTION_LABEL={add:'Sumar seleccionado',subtract:'Restar seleccionado',lock:'Bloquear/desbloquear',select:'Cambiar equipo'};
+let padMap={...PAD_DEFAULT_MAP};
+let padConnected=false;
+let padDeviceCount=0;
+let padArmed=false;
+let padLocked=false;
+let padLearning=null;
+// Equipo objetivo del mando: 0 rojo y 1 azul. Independiente del saque s.server.
+// Por seguridad se inicia siempre seleccionando ROJO al abrir la app.
+let padSelectedTeam=0;
+try{
+ const saved=JSON.parse(localStorage.getItem(PAD_MAPPING_KEY)||'null');
+ if(saved && PAD_ACTIONS.every(a=>Number.isInteger(saved[a]) && saved[a]>=0 && saved[a]<=300)
+    && new Set(PAD_ACTIONS.map(a=>saved[a])).size===PAD_ACTIONS.length){
+  padMap=Object.fromEntries(PAD_ACTIONS.map(a=>[a,saved[a]]));
+ }
+}catch(e){}
+function padKeyLabel(code){
+ const defaults={96:'A',97:'B',98:'C',99:'X',100:'Y',101:'Z',102:'L1',103:'R1',104:'L2',105:'R2',106:'THUMBL',107:'THUMBR',108:'START',109:'SELECT',110:'MODE',19:'ARRIBA',20:'ABAJO',21:'IZQUIERDA',22:'DERECHA',23:'CENTRO'};
+ return (defaults[code]||'KEYCODE '+code)+' ['+code+']';
 }
-function bleSelectTeam(){
- bleSelectedTeam=1-bleSelectedTeam;
- bleUpdateUi();
- notice('Reloj: seleccionado '+(bleSelectedTeam?'AZUL':'ROJO'));
+function padUpdateUi(){
+ const selectedName=padSelectedTeam===0?'ROJO':'AZUL';
+ const target=el('pad-target');
+ target.textContent='SELECCIONADO: '+selectedName;
+ target.dataset.team=padSelectedTeam===0?'red':'blue';
+ document.querySelector('.team.red').classList.toggle('pad-selected',padSelectedTeam===0);
+ document.querySelector('.team.blue').classList.toggle('pad-selected',padSelectedTeam===1);
+ el('pad-team-status').textContent='Equipo seleccionado: '+selectedName+' · X: sumar · B: restar';
+ const info=el('pad-indicator');
+ const state=!padConnected?'offline':!padArmed?'ready':padLocked?'locked':'armed';
+ info.dataset.state=state;
+ info.textContent='SN30: '+(!padConnected?'desconectado':padDeviceCount+' conectado'+(padDeviceCount>1?'s':''))+' · '+(!padArmed?'OFF':padLocked?'BLOQUEADO':'ON');
+ el('pad-armed-toggle').textContent=padArmed?'Desactivar SN30':'Activar SN30';
+ el('pad-armed-toggle').setAttribute('aria-pressed',String(padArmed));
+ for(const a of PAD_ACTIONS){
+  const b=el('pad-map-'+a);
+  b.textContent=PAD_ACTION_LABEL[a]+': '+padKeyLabel(padMap[a]);
+  b.dataset.learning=String(padLearning===a);
+ }
+ el('pad-status').textContent='SN30: '+(padConnected?padDeviceCount+' dispositivo(s) conectado(s)':'sin conectar')+(padLearning?' · esperando tecla para '+PAD_ACTION_LABEL[padLearning]:'');
 }
-function bleToggleArmed(){
- if(!bleConnected){notice('Conecta WATCH antes de activar el control');return}
- bleArmed=!bleArmed;
- bleUpdateUi();
- notice('Receptor BLE '+(bleArmed?'ACTIVADO':'DESACTIVADO'));
-}
-// Invocado desde Java únicamente cuando se recibe el código 0x0A, 0x0B u 0x0C.
-window.padelBleCommand=function(action){
- const labels={previous:'Anterior',pause:'Play/Pausa',next:'Siguiente'};
+window.padelGamepadStatus=function(count,deviceName){
+ const wasConnected=padConnected;
+ padDeviceCount=count;
+ padConnected=count>0;
+ if(!padConnected){
+  padArmed=false;
+  padLocked=false;
+  padLearning=null;
+  if(wasConnected)notice('SN30 desconectado: control desactivado');
+ }
+ padUpdateUi();
+};
+window.padelGamepadEvent=function(code,keyName,deviceId){
  const stamp=new Date().toLocaleTimeString('es-CL',{hour12:false});
- el('ble-last').textContent='Último botón recibido: '+(labels[action]||action)+' ('+stamp+')';
- if(!bleArmed||!bleConnected)return;
- if(el('modal').open||el('reset-confirm').open)return;
- const now=Date.now();
- // Anti-rebote limitado a repeticiones del MISMO comando dentro de 350 ms.
- // Un cambio de control no se retrasa; no se interpreta un doble clic del sensor.
- if(bleLastAction===action&&now-bleLastAt<350)return;
- bleLastAction=action;bleLastAt=now;
- if(action==='previous'){undo();notice('Reloj: deshacer último punto')}
- else if(action==='pause'){bleSelectTeam()}
- else if(action==='next'){
-  if(!s.ended){addPoint(bleSelectedTeam);notice('Reloj: +1 '+(bleSelectedTeam?'AZUL':'ROJO'))}
+ el('pad-last').textContent='Último botón: '+keyName+' ['+code+'] · dispositivo '+deviceId+' · '+stamp;
+ if(padLearning){
+  const duplicate=PAD_ACTIONS.find(a=>a!==padLearning&&padMap[a]===code);
+  if(duplicate){notice('Botón ocupado por '+PAD_ACTION_LABEL[duplicate]+'. Elige otro.');return;}
+  const assigned=padLearning;
+  padMap[assigned]=code;
+  padLearning=null;
+  try{localStorage.setItem(PAD_MAPPING_KEY,JSON.stringify(padMap))}catch(e){}
+  padUpdateUi();
+  notice(PAD_ACTION_LABEL[assigned]+' asignado a '+padKeyLabel(code));
+  return;
+ }
+ if(!padArmed || !padConnected || el('modal').open || el('reset-confirm').open)return;
+ const action=PAD_ACTIONS.find(a=>padMap[a]===code);
+ if(!action)return;
+ if(action==='lock'){
+  padLocked=!padLocked;
+  padUpdateUi();
+  notice('SN30 '+(padLocked?'BLOQUEADO':'DESBLOQUEADO'));
+  return;
+ }
+ if(padLocked)return;
+ if(action==='select'){
+  padSelectedTeam=1-padSelectedTeam;
+  padUpdateUi();
+  notice('SN30: EQUIPO '+(padSelectedTeam===0?'ROJO':'AZUL')+' seleccionado');
+  return;
+ }
+ if(action==='add'){
+  if(!s.ended){addPoint(padSelectedTeam);notice('SN30: +1 '+(padSelectedTeam===0?'ROJO':'AZUL'))}
+ }else if(action==='subtract'){
+  // Resta del equipo seleccionado: deshace su punto más reciente y reconstruye
+  // cronológicamente los puntos posteriores del rival, incluidos juegos y sets.
+  undoTeam(padSelectedTeam);
  }
 };
-window.padelBleStatus=function(state,message){
- bleConnected=(state==='ready');
- if(state!=='ready')bleArmed=false;
- el('ble-status').textContent='BLE: '+message;
- bleUpdateUi(state);
+el('pad-armed-toggle').onclick=()=>{
+ if(!padConnected){notice('Empareja y conecta el SN30 desde Ajustes Bluetooth');return;}
+ padLearning=null;
+ padArmed=!padArmed;
+ padLocked=false;
+ padUpdateUi();
+ notice('Control SN30 '+(padArmed?'ACTIVADO':'DESACTIVADO'));
 };
-el('ble-connect').onclick=()=>{
- if(window.PadelBLE)window.PadelBLE.findWatch();
- else notice('El Bluetooth solo está disponible en la APK Android');
+for(const action of PAD_ACTIONS){
+ el('pad-map-'+action).onclick=()=>{
+  if(!padConnected){notice('Conecta el SN30 antes de asignar botones');return;}
+  padArmed=false;
+  padLocked=false;
+  padLearning=action;
+  padUpdateUi();
+  notice('Pulsa en SN30 el botón para '+PAD_ACTION_LABEL[action]);
+ };
+}
+el('pad-reset-mapping').onclick=()=>{
+ padArmed=false;padLocked=false;padLearning=null;
+ padMap={...PAD_DEFAULT_MAP};
+ try{localStorage.setItem(PAD_MAPPING_KEY,JSON.stringify(padMap))}catch(e){}
+ padUpdateUi();notice('Botones restablecidos. Control desactivado');
 };
-el('ble-disconnect').onclick=()=>{if(window.PadelBLE)window.PadelBLE.disconnect()};
-el('ble-armed-toggle').onclick=bleToggleArmed;
-el('ble-switch-team').onclick=bleSelectTeam;
-bleUpdateUi('offline');
+padUpdateUi();
 // Cada punto conserva el estado previo y el equipo al que se atribuyó.
 function pushHistory(team){
  const {history,...snapshot}=s;
@@ -754,6 +841,7 @@ function confirmReplacement(){
  else if(mode==='tiebreak'){el('reset-confirm').close();demoTiebreak()}
 }
 function openMenu(){if(!el('modal').open)el('modal').showModal()}
+el('modal').addEventListener('close',()=>{if(padLearning){padLearning=null;padUpdateUi();}});
 for (const [t,id] of [[0,'score-red'],[1,'score-blue']]){
  const node=el(id);
  const LONG_PRESS_MS=650;

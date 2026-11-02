@@ -1,51 +1,53 @@
-# Marcador de Pádel v2.5 + control BLE FitPro LP715(D)
+# Marcador de Pádel v2.8 — SOLO 8BitDo SN30
 
-**Proyecto Android para compilar por GitHub Actions. No incluye un APK ya compilado.**
+Proyecto **Android Java** para la Nexus 10 con Android 10. Se compila con GitHub Actions, sin Android Studio. El ZIP es **código fuente**, no un APK compilado.
 
-## Funciones
-- Conserva el marcador v2.4: tres formatos, LED y sólido, punto de oro, tie-break, saque, historial de deshacer y pantalla completa.
-- Receptor BLE directo del reloj `WATCH` por Nordic UART, sin ejecutar FitPro ni modificar su firmware.
-- Music Anterior `0x0A`: deshacer último punto.
-- Music Play/Pausa `0x0B`: cambiar equipo seleccionado (rojo/azul).
-- Music Siguiente `0x0C`: sumar un punto al equipo seleccionado.
-- La app **NO activa la cámara automáticamente**. Cuando se conecta, envía solamente el comando conocido de desactivación de cámara.
-- Los eventos de cámara no suman puntos. Los controles desconocidos 0x01/0x03/0x04 tampoco.
-- El control remoto comienza **desactivado**, aun cuando el reloj esté conectado. Se activa manualmente en el menú de la app.
-- El menú muestra hora y tipo del último comando musical recibido incluso desactivado (para probar sin alterar el puntaje).
-- Indicador de conexión, equipo seleccionado y estado ON/OFF siempre visible.
-- Filtro antirrebote de 350 ms por acción. Este valor es preliminar; probar en cancha antes de darlo por fiable.
-- Guarda el log BLE en `files/ble_log.txt` para extracción mediante ADB root.
+## Controles por defecto
 
-## Cómo compilar
-El workflow está en `.github/workflows/compilar-apk.yml`. Se ejecuta al subir cambios a `main` o desde `Actions > Compilar Marcador Padel BLE > Run workflow`. El artefacto contiene `app-debug.apk`.
+| Botón | Acción |
+| --- | --- |
+| **SELECT** | Cambiar equipo seleccionado (rojo/azul). No cambia el saque. |
+| **X** | **Sumar** un punto al equipo seleccionado. |
+| **B** | **Restar** el último punto registrado del equipo seleccionado. |
+| **Y** | Bloquear/desbloquear las pulsaciones del SN30. |
+| **A** | Sin acción asignada. Disponible para futuras funciones. |
 
-## Instalación
+Al cambiar equipo, se ilumina un indicador junto al puntaje elegido y aparece el texto **SELECCIONADO: ROJO/AZUL**. Esto es independiente de la pelota que indica el saque.
+
+### Qué significa restar
+
+**B corrige el último punto que se registró para el equipo seleccionado** (no necesariamente la última jugada del partido). Se utiliza el historial de puntos del marcador, se retira ese punto y se vuelven a aplicar los puntos posteriores del otro equipo. Esto también puede afectar un juego o set si el punto corregido lo había decidido. Si no hay ningún punto del equipo en el historial, no resta ni altera resultados. No es una resta aritmética de 15 puntos ni permite puntuaciones negativas. El historial guarda hasta 200 jugadas; al retroceder más allá de ellas no hay garantía de poder restar puntos anteriores.
+
+Se conserva el botón táctil **Deshacer punto** del menú, para deshacer la última jugada sin importar el equipo. También se mantiene la pulsación prolongada sobre cada marcador para restar al equipo correspondiente.
+
+### Seguridad y preferencias
+
+- La aplicación **solo** acepta eventos HID (`KeyEvent`) provenientes de un control cuyo nombre contenga `8BitDo` y `SN30`. Sin FitPro, sin BLE propietario, sin permisos Bluetooth en la APK.
+- Para comenzar, empareja desde Ajustes de Android → Bluetooth y activa el control desde el menú del marcador (mantén pulsada la **hora**). Cada inicio de app deja el mando desactivado por seguridad.
+- **Y** alterna bloqueado/desbloqueado mientras el control está activo. Bloqueado ignora SELECT, X y B.
+- Las cuatro acciones pueden reasignarse desde el menú. La versión 2.8 usa una clave nueva para sus asignaciones, así no hereda una asignación de v2.7 que haría que X/B ejecuten otras funciones.
+- El marcador sigue guardando el partido localmente en Android.
+- `KeyEvent.ACTION_DOWN` sin repeticiones evita sumar/restar repetidamente si dejas el botón apretado.
+
+## Compilar con GitHub Actions
+
+1. Descomprime el ZIP y copia **todo su contenido** a la raíz de tu repositorio GitHub `Marcador` (rama `main`). Actualiza o sustituye los archivos de versiones anteriores.
+2. GitHub → **Actions → Compilar Marcador Padel SN30 → Run workflow** (o haz push a `main`).
+3. Descarga el artefacto **MarcadorPadel-SN30-SELECT-RESTA-v2-8**. Dentro viene `app-debug.apk`.
+4. En PowerShell, desde la carpeta donde descargaste el APK:
 
 ```powershell
 cd C:\platform-tools
+.\adb devices -l
 .\adb install -r .\app-debug.apk
 ```
 
-El paquete es `cl.marcadorpadel.ble`, **diferente** del diagnóstico `cl.padel.fitprodiag` y del marcador antiguo. No reemplaza ninguno de ellos.
+El `applicationId` es `cl.marcadorpadel.sn30`, igual que en v2.7. Si cambió la firma de compilación, `INSTALL_FAILED_UPDATE_INCOMPATIBLE` puede requerir desinstalar; haz respaldo de los datos antes de hacerlo porque los partidos se guardan localmente.
 
-Abre **Marcador Pádel BLE**. Mantén pulsada la hora del marcador para abrir el menú. En la sección *Control FitPro LP715(D)* pulsa **Buscar WATCH**, acepta ubicación y verifica que Bluetooth y Ubicación estén activados en Android 10. Si no conecta al primer intento, vuelve a pulsar Buscar. Una vez conectado, pulsa **Activar control** y cierra el menú. Entra en Music del reloj.
+## Verificación pendiente en hardware
 
-Para ver si la entrada BLE responde sin modificar el partido, deja *Activar control* desactivado. Se actualizará `Último botón recibido` en el menú cada vez que llegue un comando musical.
+En tu Nexus 10 ya se comprobó el emparejamiento y la llegada de señales distintas del 8BitDo SN30 mediante `adb shell getevent -lt`. Aún falta validar la traducción real de SELECT/X/B/Y a `KeyEvent` de Android y probar esta v2.8 instalada. Para comprobarlo: abre el menú → **Último botón** o usa `adb logcat -s PadelSN30:D`. Si alguna tecla aparece distinta, reasígnala en el menú.
 
-## Logs ADB
+## Estado de compilación
 
-```powershell
-.\adb root
-.\adb pull /data/data/cl.marcadorpadel.ble/files/ble_log.txt "$env:USERPROFILE\Downloads\marcador_ble_v25.txt"
-```
-
-## Límites y advertencias
-- No existe prueba física de esta nueva versión: la compilación y la integración deberán verificarse en GitHub/Nexus 10.
-- No podemos modificar desde Android la velocidad con que el **firmware del reloj** navega su menú de Música.
-- El reloj debe estar en Música y activar el control elegido con su sensor táctil. Si tarda demasiado o la pantalla se apaga, los controles táctiles de la tablet siguen operativos.
-- No se ha demostrado que el clic simple/doble del sensor transmita comandos BLE propios.
-- No se ha probado recuperación de puntos si la tablet pierde energía justo mientras registra un punto; el marcador conserva su guardado local normal.
-- El permiso de ubicación se usa para escanear BLE en Android 10.
-
-## Actualizar repositorio GitHub existente
-Descomprime este ZIP en una carpeta aparte; copia todos los archivos y carpetas (incluyendo `.github`) a la raíz de tu clon local de Git. Borra el código anterior del diagnóstico `app/src/main/java/cl/padel/fitprodiag` si todavía existe en ese repositorio. No borres la carpeta `.git` ni el historial. Luego `git add -A`, `git commit -m "Marcador de padel v2.5 con BLE FitPro"` y `git push origin main`.
+El ZIP incluye workflow de compilación con Java 17, SDK 35, Gradle 8.9 y Android Gradle Plugin 8.7.3. El APK final se obtiene desde GitHub Actions.
