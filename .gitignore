@@ -6,3 +6,6 @@ local.properties
 .idea/
 *.iml
 .DS_Store
+
+# Windows download metadata
+*:Zone.Identifier
