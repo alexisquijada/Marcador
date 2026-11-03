@@ -427,6 +427,27 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
 #modal .closebtn{flex-shrink:0;margin-top:8px}
 @media(max-width:620px){#modal{padding:12px}#modal .menu-shell{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);height:86dvh;gap:8px}#modal .menu-intro{overflow:visible;padding:0}#modal .mb-menu-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:6px}#modal .mb-nav-btn{font-size:11px;min-height:41px;padding:7px 6px}#modal .menu-controls-scroll{overflow-y:auto}#modal .brand-home{padding:5px 8px}#modal .brand-sub{display:none}}
 
+/* Controles táctiles del menú: mínimo 48 px, también al moverlos de sección. */
+#modal button,#modal .actions button,#modal .style-option,#modal .layout-option,
+#modal .mb-nav-btn,#modal #close,#reset-confirm button,#manual-edit button{
+ min-width:48px;min-height:48px;padding:12px 14px;font-size:16px;line-height:1.3;
+ white-space:normal;overflow-wrap:anywhere;cursor:pointer;
+}
+#modal .menu-controls .closebtn{flex:0 0 auto;min-height:48px}
+#modal .brand-home{min-height:48px}
+#modal .mb-menu-panel p,#modal .hint,#modal #rules-pill,
+#modal .style-heading,#modal .layout-heading,#modal .layout-note,
+#manual-edit label,#manual-edit p.manual-lead,#reset-confirm p{font-size:16px}
+#modal .pad-mapping{gap:10px}
+#modal #pad-reset-mapping,#modal #manual-open{width:100%;margin:8px 0}
+#modal .menu-controls-scroll > .section-heading{display:none}
+#manual-edit input:not([type=checkbox]),#manual-edit select{min-height:48px}
+#manual-edit .manual-switch label{min-height:48px;cursor:pointer}
+@media(max-width:620px){
+ #modal .mb-nav-btn{font-size:14px;padding:10px 8px}
+ #modal .menu-shell{height:min(86dvh,calc(100dvh - 52px))}
+}
+
 </style>
 </head>
 <body>
@@ -600,7 +621,10 @@ function selectScoreLayout(layout){
 }
 const SCORE_STYLE_KEY='padel_score_style_v1';
 let scoreStyle='solid';
-try{if(localStorage.getItem(SCORE_STYLE_KEY)==='solid')scoreStyle='solid'}catch(e){}
+try{
+ const savedStyle=localStorage.getItem(SCORE_STYLE_KEY);
+ if(['led','solid'].includes(savedStyle))scoreStyle=savedStyle;
+}catch(e){}
 document.documentElement.dataset.scoreStyle=scoreStyle;
 function selectScoreStyle(style){
  if(style!=='led'&&style!=='solid')return;
@@ -983,6 +1007,12 @@ function createManualCandidate(){
  if(tb && (games[0]!==6||games[1]!==6))throw new Error('Para tie-break, ambos equipos deben tener 6 juegos.');
  if(tb && Math.max(...points)>=7 && Math.abs(points[0]-points[1])>=2)
   throw new Error('Ese tie-break ya estaria terminado. Ajusta el set ganado y reinicia los puntos.');
+ if(sets.some(n=>n===2) && (tb||games.some(n=>n!==0)||points.some(n=>n!==0)))
+  throw new Error('Un partido terminado debe tener puntos y juegos en cero y no puede estar en tie-break.');
+ if(!tb && games[0]===6 && games[1]===6)
+  throw new Error('Con juegos 6–6, activa la opción de tie-break.');
+ if(!tb && (games.includes(7)||(Math.max(...games)>=6&&Math.abs(games[0]-games[1])>=2)))
+  throw new Error('Ese set ya estaría terminado. Ajusta los sets ganados y reinicia los juegos y puntos.');
  // Una edicion no debe reactivar una secuencia anterior de puntos.
  const played=points[0]+points[1];
  return {...deepCopy(s),points,games,sets,tiebreak:tb,
@@ -1042,7 +1072,7 @@ function askReplacement(mode){
   reset:['¿Iniciar un nuevo partido?','Se reiniciarán los puntos, juegos, sets, saque, tiempo y el historial de deshacer.','Iniciar nuevo'],
   demo:['¿Cargar partido de ejemplo?','Reemplazará el marcador del partido actual.','Cargar ejemplo'],
   tiebreak:['¿Cargar tie-break de prueba?','Reemplazará el marcador del partido actual por un tie-break 6–6.','Probar tie-break'],
-  manual:['¿Sobreescribir resultado?',manualSummary(manualCandidate),'Confirmar corrección'],
+  manual:['¿Sobreescribir resultado?',mode==='manual'?manualSummary(manualCandidate):'','Confirmar corrección'],
   rollback:['¿Restaurar el resultado previo?','Se volverá al estado anterior a la última corrección manual. Se perderán los puntos y ajustes registrados después.','Restaurar anterior']
  }[mode];
  if(!data)return;
