@@ -1,3 +1,11 @@
+## Pendiente — Saque a la izquierda y sets sin límite
+- En horizontal, la vista lado a lado coloca siempre a quien saca a la izquierda, conservando el color y puntaje de cada equipo.
+- La pelota y el indicador acompañan al equipo que saca; el orden se actualiza también al corregir el saque, deshacer y durante el tie-break.
+- El partido permite acumular sets hasta reiniciarlo, incluso al recuperar partidas que versiones anteriores marcaban como terminadas. La edición manual también admite más de dos sets por equipo.
+- Resumen grande automático al completar cada set, con resultados por color y duración configurable en Apariencia (10 segundos por defecto). El detalle se conserva al recargar y se corrige al deshacer.
+- START alterna el marcador y el resumen grande; al abrirlo manualmente permanece visible hasta volver. Los botones de puntos actúan en la vista del marcador. START queda reservado y SELECT mantiene el bloqueo.
+- Se mantienen las asignaciones del mando por color y las vistas apiladas.
+
 ## 3.10 — Indicador discreto de bloqueo
 - SELECT bloquea/desbloquea sin mensajes flotantes ni alertas de pantalla completa.
 - Franja amarilla de ancho completo en el borde inferior solo mientras el control está bloqueado.

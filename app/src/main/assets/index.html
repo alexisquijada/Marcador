@@ -232,23 +232,23 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
  html[data-layout="classic"] .score-digits{height:96%;max-height:43vh;align-self:center}
  html[data-layout="classic"] #stats-shared{height:95%;padding:.7vh 0}
  /* El formato 'completo' usa las reglas full-height de v2.2, sin cambios. */
- /* Lado a lado: rojo y azul comparten la altura; estadísticas más angostas al costado. */
+ /* Lado a lado: quien saca va a la izquierda y cada equipo conserva su color. */
  html[data-layout="side"] #scoreboard{
    grid-template-columns:minmax(0,37fr) minmax(0,35fr) minmax(0,27fr);
    grid-template-rows:clamp(27px,4.2vh,38px) minmax(0,1fr);
    column-gap:.45vw;row-gap:clamp(3px,.8vh,8px);padding:0 1vw .55vh;
  }
  html[data-layout="side"] #topbar{grid-column:1/-1;grid-row:1}
- html[data-layout="side"] .team.red{grid-column:1;grid-row:2}
- html[data-layout="side"] .team.blue{grid-column:2;grid-row:2}
+ html[data-layout="side"] .team.serving{grid-column:1;grid-row:2}
+ html[data-layout="side"] .team:not(.serving){grid-column:2;grid-row:2}
  html[data-layout="side"] .score-area{height:100%;display:flex;align-items:center;justify-content:center;gap:0}
- html[data-layout="side"] .team.red .score-area{padding-right:clamp(36px,4.5vw,62px)}
- html[data-layout="side"] .team.blue .score-area{padding-left:clamp(36px,4.5vw,62px)}
+ html[data-layout="side"] .team.serving .score-area{padding-right:clamp(36px,4.5vw,62px)}
+ html[data-layout="side"] .team:not(.serving) .score-area{padding-left:clamp(36px,4.5vw,62px)}
  html[data-layout="side"] .score-digits{width:100%;height:94%;max-height:none;min-width:0;align-self:center;flex:0 1 auto}
  html[data-layout="side"] .score-digits.single-digit{width:72%}
  /* Dos botones comparten la misma posición central; solo se muestra quien saca. */
  html[data-layout="side"] .serve-btn{display:grid;position:absolute;top:50%;right:0;left:auto;transform:translate(50%,-50%);margin:0;width:clamp(36px,4vw,56px);height:clamp(36px,4vw,56px);z-index:3}
- html[data-layout="side"] .team.blue .serve-btn{left:0;right:auto;transform:translate(-50%,-50%)}
+ html[data-layout="side"] .team:not(.serving) .serve-btn{left:0;right:auto;transform:translate(-50%,-50%)}
  html[data-layout="side"] .serve-btn:not(.active){visibility:hidden;pointer-events:none}
  html[data-layout="side"] #stats-shared{grid-column:3;grid-row:2;height:94%;width:100%;justify-self:stretch;align-self:center;grid-template-rows:16% 42% 42%;border-radius:clamp(12px,2vw,30px)}
  html[data-layout="side"] .stats-header{font-size:clamp(12px,1.6vw,24px)}
@@ -289,8 +289,8 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
    padding:0 .45vw .35vh;
  }
  /* Se reduce la reserva central de la pelota: ambos numeros ganan ancho. */
- html[data-layout="side"] .team.red .score-area{padding-right:clamp(20px,2vw,35px)}
- html[data-layout="side"] .team.blue .score-area{padding-left:clamp(20px,2vw,35px)}
+ html[data-layout="side"] .team.serving .score-area{padding-right:clamp(20px,2vw,35px)}
+ html[data-layout="side"] .team:not(.serving) .score-area{padding-left:clamp(20px,2vw,35px)}
  html[data-layout="side"] .score-digits{
    height:92%;
    align-self:flex-start;
@@ -448,6 +448,20 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
  #modal .menu-shell{height:min(86dvh,calc(100dvh - 52px))}
 }
 
+/* Resumen temporal de los sets completados. */
+#set-summary{position:fixed;inset:0;z-index:7;background:#000;display:flex;flex-direction:column;gap:2vh;padding:3vh 3vw;text-align:center}
+#set-summary[hidden]{display:none}
+#set-summary h2{margin:0;font-size:clamp(24px,5vh,52px)}
+#set-summary-results{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-content:safe center;justify-content:center;gap:2vh 2vw}
+.set-result{flex:1 0 min(100%,300px);max-width:600px;padding:1.5vh 2vw;border:1px solid #444;border-radius:16px}
+.set-result h3{margin:0 0 1vh;font-size:clamp(18px,3vh,32px);color:#ddd}
+.set-result-score{display:flex;align-items:center;justify-content:center;gap:2vw;font-size:clamp(54px,14vh,160px);font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.set-result-team{display:flex;flex-direction:column}
+.set-result-team small{font-size:clamp(14px,2.5vh,26px)}
+.set-result-team.red{color:var(--red)}.set-result-team.blue{color:var(--blue)}
+#set-summary-close{align-self:center;min-height:48px;padding:10px 24px;font-size:clamp(16px,2.8vh,26px);border:1px solid #777;border-radius:10px;background:#222;color:#fff;cursor:pointer}
+.summary-setting input{width:100%;max-width:160px;min-height:48px;margin-top:8px;padding:8px;font-size:20px}
+
 </style>
 </head>
 <body>
@@ -477,6 +491,11 @@ html[data-score-style="solid"] .score-digits text{font-family:Arial,Helvetica,Ro
   <div class="stats-row stats-blue" aria-label="Azul"><span id="games-blue" class="stat-number" aria-label="Juegos del azul">0</span><span id="sets-blue" class="stat-number" aria-label="Sets del azul">0</span></div>
  </aside>
 </main>
+<section id="set-summary" hidden role="region" aria-label="Resumen de sets" aria-live="polite">
+ <h2>Resumen de sets</h2>
+ <div id="set-summary-results"></div>
+ <button type="button" id="set-summary-close">Volver al marcador</button>
+</section>
 <div id="status" aria-live="polite"></div>
 <div id="pad-indicator" data-state="offline" aria-live="polite">Control: desconectado · OFF</div>
 <div id="pad-lock-stripe" hidden aria-label="Control bloqueado" role="status"></div>
@@ -493,7 +512,7 @@ DESCONECTADO</div>
  <div class="menu-shell">
   <div class="menu-intro">
    <div class="brand-home" role="button" tabindex="0" id="brand-home" aria-label="Volver al marcador"><span class="brand-p">MB</span><h2>MatchBoard</h2></div><p class="brand-sub">Configuración</p>
-   <p>Toca el puntaje para sumar. Mantén pulsado el puntaje rojo o azul para corregir el último punto si fue de ese equipo. Para abrir este menú, mantén pulsada la hora. Toca la pelota para indicar quién saca.</p>
+   <p>Toca el puntaje para sumar. Mantén pulsado el puntaje rojo o azul para corregir el último punto si fue de ese equipo. Para abrir este menú, mantén pulsada la hora. Toca la pelota para indicar quién saca. En la vista lado a lado, quien saca aparece siempre a la izquierda y conserva su color.</p>
    <div class="hint">Teclado: <strong>1</strong> suma al rojo, <strong>2</strong> al azul, <strong>Q</strong> marca saque rojo, <strong>W</strong> marca saque azul, <strong>Z</strong> deshace, <strong>M</strong> abre el menú.</div>
    <div class="style-setting" aria-label="Estilo de números">
     <div class="style-heading">Estilo de números</div>
@@ -510,6 +529,11 @@ DESCONECTADO</div>
      <button type="button" id="layout-side" class="layout-option" aria-pressed="false">Lado a lado</button>
     </div>
     <div class="layout-note">En vertical se mantiene la distribución apilada.</div>
+   </div>
+   <div class="layout-setting summary-setting">
+    <label for="set-summary-seconds">Duración del resumen de sets (segundos)</label>
+    <input id="set-summary-seconds" type="number" min="1" max="300" step="1" value="10" inputmode="numeric" required>
+    <p class="layout-note">Entre 1 y 300 segundos. Se muestra al finalizar cada set.</p>
    </div>
   </div>
   <div class="menu-controls">
@@ -533,7 +557,7 @@ DESCONECTADO</div>
        <button type="button" id="pad-map-subtractBlue">Restar AZUL: Y</button>
        <button type="button" id="pad-map-lock">Bloquear/desbloquear: SELECT</button>
      </div>
-     <p id="pad-help">Compatible con mandos reconocidos por Android como controles de juego HID, incluidos Bluetooth y USB. Predeterminados: X/B rojo, A/Y azul, SELECT bloqueo. Conecta desde Ajustes de Android y pulsa el botón que deseas asociar. Las asignaciones se guardan; puedes restaurar los valores originales. Se aceptan varios mandos conectados, pero en esta versión todos comparten las mismas acciones.</p>
+     <p id="pad-help">Compatible con mandos reconocidos por Android como controles de juego HID, incluidos Bluetooth y USB. Predeterminados: X/B rojo, A/Y azul, SELECT bloqueo; START alterna marcador y resumen. Conecta desde Ajustes de Android y pulsa el botón que deseas asociar. Las asignaciones se guardan; puedes restaurar los valores originales. Se aceptan varios mandos conectados, pero en esta versión todos comparten las mismas acciones.</p>
    </section>
    <h3 class="section-heading">Partido y herramientas</h3>
    <div class="actions">
@@ -570,14 +594,14 @@ DESCONECTADO</div>
     <label class="manual-regular-point">Puntos<select id="manual-red-point"><option value="0">0</option><option value="1">15</option><option value="2">30</option><option value="3">40</option></select></label>
     <label class="manual-tb-point" hidden>Puntos tie-break<input id="manual-red-tb" type="number" min="0" max="99" step="1" inputmode="numeric" value="0"></label>
     <label>Juegos<input id="manual-red-games" type="number" min="0" max="7" step="1" inputmode="numeric" required></label>
-    <label>Sets<input id="manual-red-sets" type="number" min="0" max="2" step="1" inputmode="numeric" required></label>
+    <label>Sets<input id="manual-red-sets" type="number" min="0" step="1" inputmode="numeric" required></label>
    </fieldset>
    <fieldset class="manual-team manual-blue">
     <legend>Equipo AZUL</legend>
     <label class="manual-regular-point">Puntos<select id="manual-blue-point"><option value="0">0</option><option value="1">15</option><option value="2">30</option><option value="3">40</option></select></label>
     <label class="manual-tb-point" hidden>Puntos tie-break<input id="manual-blue-tb" type="number" min="0" max="99" step="1" inputmode="numeric" value="0"></label>
     <label>Juegos<input id="manual-blue-games" type="number" min="0" max="7" step="1" inputmode="numeric" required></label>
-    <label>Sets<input id="manual-blue-sets" type="number" min="0" max="2" step="1" inputmode="numeric" required></label>
+    <label>Sets<input id="manual-blue-sets" type="number" min="0" step="1" inputmode="numeric" required></label>
    </fieldset>
   </div>
   <div class="manual-extra">
@@ -585,7 +609,7 @@ DESCONECTADO</div>
    <label>Tiempo transcurrido (minutos)<input id="manual-minutes" type="number" min="0" max="9999" step="1" inputmode="numeric" required></label>
    <label>Segundos<input id="manual-seconds" type="number" min="0" max="59" step="1" inputmode="numeric" required></label>
   </div>
-  <p class="manual-note">Los juegos son los del <strong>set actual</strong>. Al indicar 2 sets ganados, el partido se considera terminado. El tie-break requiere 6–6 en juegos.</p>
+  <p class="manual-note">Los juegos son los del <strong>set actual</strong>. Puedes acumular los sets que necesites hasta iniciar un nuevo partido. El tie-break requiere 6–6 en juegos. Si cambias los sets ganados, se borra el detalle de los sets anteriores del resumen.</p>
   <p id="manual-error" role="alert" hidden></p>
   <div class="manual-buttons">
    <button type="button" id="manual-cancel">Cancelar</button>
@@ -665,7 +689,7 @@ function draw(id,val){
   svg.appendChild(g);
  }
 }
-const blank=()=>({points:[0,0],games:[0,0],sets:[0,0],tiebreak:false,tiebreakStarter:null,ended:false,history:[],server:0,startTs:Date.now()});
+const blank=()=>({points:[0,0],games:[0,0],sets:[0,0],completedSets:[],tiebreak:false,tiebreakStarter:null,history:[],server:0,startTs:Date.now()});
 // Número de puntos YA disputados en el tie-break: primer saque (1 punto), después turnos de 2.
 function servingPairForTiebreak(starter,played){
  if(played===0)return starter;
@@ -686,6 +710,59 @@ try{
 const el=(id)=>document.getElementById(id);
 const deepCopy=(x)=>JSON.parse(JSON.stringify(x));
 function save(){try{localStorage.setItem('padel_scoreboard_v08',JSON.stringify(s))}catch(e){}}
+// Preferencia independiente del partido: se conserva al reiniciar.
+const SET_SUMMARY_SECONDS_KEY='matchboard_set_summary_seconds_v1';
+let setSummarySeconds=10;
+try{
+ const saved=Number(localStorage.getItem(SET_SUMMARY_SECONDS_KEY));
+ if(Number.isInteger(saved)&&saved>=1&&saved<=300)setSummarySeconds=saved;
+}catch(e){}
+el('set-summary-seconds').value=String(setSummarySeconds);
+el('set-summary-seconds').addEventListener('change',event=>{
+ const input=event.target;
+ input.setCustomValidity('');
+ if(!input.checkValidity()){input.reportValidity();return}
+ setSummarySeconds=Number(input.value);
+ try{localStorage.setItem(SET_SUMMARY_SECONDS_KEY,String(setSummarySeconds))}catch(e){}
+ notice('Duración del resumen guardada');
+});
+let setSummaryTimer;
+function hideSetSummary(){
+ clearTimeout(setSummaryTimer);
+ el('set-summary').hidden=true;
+}
+function showSetSummary(autoClose=true){
+ if(replaying)return;
+ hideSetSummary();
+ const results=el('set-summary-results');
+ results.replaceChildren();
+ if(!s.completedSets.length){
+  const empty=document.createElement('p');empty.textContent='Aún no hay sets completados.';results.appendChild(empty);
+ }
+ for(const result of s.completedSets){
+  const card=document.createElement('article');card.className='set-result';
+  const title=document.createElement('h3');title.textContent='Set '+result.number;card.appendChild(title);
+  const score=document.createElement('div');score.className='set-result-score';
+  // El equipo que sirve el próximo juego conserva la posición izquierda.
+  for(const [index,team] of [s.server,1-s.server].entries()){
+   if(index){const dash=document.createElement('span');dash.textContent='–';score.appendChild(dash)}
+   const value=document.createElement('span');value.className='set-result-team '+(team?'blue':'red');
+   const label=document.createElement('small');label.textContent=team?'AZUL':'ROJO';
+   const games=document.createElement('span');games.textContent=String(result.games[team]);
+   value.append(label,games);score.appendChild(value);
+  }
+  card.appendChild(score);results.appendChild(card);
+ }
+ el('set-summary').hidden=false;
+ results.scrollTop=results.scrollHeight;
+ // El resumen solicitado con START permanece hasta volver al marcador.
+ if(autoClose)setSummaryTimer=setTimeout(hideSetSummary,setSummarySeconds*1000);
+}
+function toggleSetSummary(){
+ if(el('set-summary').hidden)showSetSummary(false);
+ else hideSetSummary();
+}
+el('set-summary-close').onclick=hideSetSummary;
 function pointText(t){
  if(s.tiebreak)return String(s.points[t]);
  const p=s.points[t],o=s.points[1-t];
@@ -709,8 +786,10 @@ function updateServe(){
  el('serve-blue').setAttribute('aria-label',s.server===1?'Azul está sacando':'Marcar saque para azul');
 }
 function update(){
+ hideSetSummary();
+ if(!Array.isArray(s.completedSets))s.completedSets=[];
  const tb=el('tiebreak-label');
- const goldenPoint=!s.tiebreak&&!s.ended&&s.points[0]>=3&&s.points[1]>=3;
+ const goldenPoint=!s.tiebreak&&s.points[0]>=3&&s.points[1]>=3;
  tb.textContent=s.tiebreak?'TIE-BREAK':goldenPoint?'PUNTO DE ORO':'';
  tb.classList.toggle('visible',s.tiebreak||goldenPoint);
  tb.classList.toggle('is-tiebreak',!!s.tiebreak);
@@ -735,6 +814,7 @@ function notice(message){
 // Emparejamiento en Ajustes de Android, sin permisos Bluetooth ni root.
 // Usar clave nueva para ignorar asignaciones anteriores de SELECT/X/B/Y.
 const PAD_MAPPING_KEY='padel_sn30_mapping_v4'; // mantener datos existentes
+const PAD_START_CODE=108; // START queda reservado para alternar las vistas.
 const PAD_ACTIONS=['addRed','subtractRed','addBlue','subtractBlue','lock'];
 const PAD_DEFAULT_MAP={addRed:99,subtractRed:97,addBlue:96,subtractBlue:100,lock:109};
 const PAD_ACTION_LABEL={addRed:'Sumar ROJO',subtractRed:'Restar ROJO',addBlue:'Sumar AZUL',subtractBlue:'Restar AZUL',lock:'Bloquear/desbloquear'};
@@ -751,6 +831,13 @@ try{
   padMap=Object.fromEntries(PAD_ACTIONS.map(a=>[a,saved[a]]));
  }
 }catch(e){}
+// Migrar solo la acción que antes hubiera utilizado START, conservando las demás.
+for(const action of PAD_ACTIONS){
+ if(padMap[action]!==PAD_START_CODE)continue;
+ const available=[PAD_DEFAULT_MAP[action],96,97,98,99,100,101,102,103,104,105,106,107,109,110];
+ padMap[action]=available.find(code=>code!==PAD_START_CODE&&!Object.values(padMap).includes(code));
+ try{localStorage.setItem(PAD_MAPPING_KEY,JSON.stringify(padMap))}catch(e){}
+}
 function padKeyLabel(code){
  const defaults={96:'A',97:'B',98:'C',99:'X',100:'Y',101:'Z',102:'L1',103:'R1',104:'L2',105:'R2',106:'THUMBL',107:'THUMBR',108:'START',109:'SELECT',110:'MODE',19:'ARRIBA',20:'ABAJO',21:'IZQUIERDA',22:'DERECHA',23:'CENTRO'};
  return (defaults[code]||'KEYCODE '+code)+' ['+code+']';
@@ -798,6 +885,7 @@ window.padelGamepadEvent=function(code,keyName,deviceId){
  const stamp=new Date().toLocaleTimeString('es-CL',{hour12:false});
  el('pad-last').textContent='Último botón: '+keyName+' ['+code+'] · dispositivo '+deviceId+' · '+stamp;
  if(padLearning){
+  if(code===PAD_START_CODE){notice('START está reservado para alternar marcador y resumen');return}
   const duplicate=PAD_ACTIONS.find(a=>a!==padLearning&&padMap[a]===code);
   if(duplicate){notice('Botón ocupado por '+PAD_ACTION_LABEL[duplicate]+'. Elige otro.');return;}
   const assigned=padLearning;
@@ -809,6 +897,10 @@ window.padelGamepadEvent=function(code,keyName,deviceId){
   return;
  }
  if(!padArmed || !padConnected || el('modal').open || el('reset-confirm').open || el('manual-edit').open)return;
+ if(code===PAD_START_CODE){
+  if(!padLocked)toggleSetSummary();
+  return;
+ }
  const action=PAD_ACTIONS.find(a=>padMap[a]===code);
  if(!action)return;
  if(action==='lock'){
@@ -819,13 +911,13 @@ window.padelGamepadEvent=function(code,keyName,deviceId){
   clearTimeout(statusTimer);
   return;
  }
- if(padLocked)return;
+ if(padLocked||!el('set-summary').hidden)return;
  if(action==='addRed'){
-  if(!s.ended){addPoint(0);notice('Control: +1 ROJO')}
+  addPoint(0);notice('Control: +1 ROJO')
  }else if(action==='subtractRed'){
   undoTeam(0);
  }else if(action==='addBlue'){
-  if(!s.ended){addPoint(1);notice('Control: +1 AZUL')}
+  addPoint(1);notice('Control: +1 AZUL')
  }else if(action==='subtractBlue'){
   undoTeam(1);
  }
@@ -883,8 +975,9 @@ function setServer(team){
  update();notice(team===0?'Saca rojo':'Saca azul');
 }
 function awardSet(team){
+ if(!Array.isArray(s.completedSets))s.completedSets=[];
+ s.completedSets.push({number:s.sets[0]+s.sets[1]+1,games:[...s.games]});
  s.sets[team]++;s.games=[0,0];s.points=[0,0];s.tiebreak=false;s.tiebreakStarter=null;
- if(s.sets[team]>=2){s.ended=true;notice('Partido terminado · '+(team===0?'Rojo':'Azul')+' gana')}
 }
 function awardGame(team,viaTiebreak=false){
  s.games[team]++;s.points=[0,0];
@@ -905,7 +998,8 @@ function awardGame(team,viaTiebreak=false){
  }
 }
 function addPoint(team,render=true){
- if(s.ended){notice('Partido terminado. Usa nuevo partido');return}
+ if(!el('set-summary').hidden)return;
+ const previousSets=s.sets[0]+s.sets[1];
  pushHistory(team);
  if(s.tiebreak){
   s.points[team]++;
@@ -923,12 +1017,13 @@ function addPoint(team,render=true){
   update();
   const area=el('score-'+(team?'blue':'red'));
   area.classList.add('flash');setTimeout(()=>area.classList.remove('flash'),180);
+  if(s.sets[0]+s.sets[1]>previousSets)showSetSummary();
  }
 }
 function undo(){
  if(!s.history.length){notice('No hay puntos para deshacer');return}
  const old=s.history.pop(),history=s.history;
- s={...withoutScorer(old),history};
+ s={...blank(),...withoutScorer(old),history};
  update();
  notice('Último punto deshecho');
 }
@@ -1000,15 +1095,12 @@ function createManualCandidate(){
  const points=tb?[intManual('manual-red-tb',0,99),intManual('manual-blue-tb',0,99)]:[
   intManual('manual-red-point',0,3),intManual('manual-blue-point',0,3)];
  const games=[intManual('manual-red-games',0,7),intManual('manual-blue-games',0,7)];
- const sets=[intManual('manual-red-sets',0,2),intManual('manual-blue-sets',0,2)];
+ const sets=[intManual('manual-red-sets',0,Number.MAX_SAFE_INTEGER),intManual('manual-blue-sets',0,Number.MAX_SAFE_INTEGER)];
  const server=intManual('manual-server',0,1);
  const mins=intManual('manual-minutes',0,9999),secs=intManual('manual-seconds',0,59);
- if(sets[0]===2&&sets[1]===2)throw new Error('Los dos equipos no pueden tener 2 sets ganados en un partido al mejor de 3.');
  if(tb && (games[0]!==6||games[1]!==6))throw new Error('Para tie-break, ambos equipos deben tener 6 juegos.');
  if(tb && Math.max(...points)>=7 && Math.abs(points[0]-points[1])>=2)
   throw new Error('Ese tie-break ya estaria terminado. Ajusta el set ganado y reinicia los puntos.');
- if(sets.some(n=>n===2) && (tb||games.some(n=>n!==0)||points.some(n=>n!==0)))
-  throw new Error('Un partido terminado debe tener puntos y juegos en cero y no puede estar en tie-break.');
  if(!tb && games[0]===6 && games[1]===6)
   throw new Error('Con juegos 6–6, activa la opción de tie-break.');
  if(!tb && (games.includes(7)||(Math.max(...games)>=6&&Math.abs(games[0]-games[1])>=2)))
@@ -1016,15 +1108,16 @@ function createManualCandidate(){
  // Una edicion no debe reactivar una secuencia anterior de puntos.
  const played=points[0]+points[1];
  return {...deepCopy(s),points,games,sets,tiebreak:tb,
+  completedSets:sets.every((n,i)=>n===s.sets[i])?deepCopy(s.completedSets):[],
   tiebreakStarter:tb?starterFromCurrentServer(played,server):null,
-  server,ended:sets.some(n=>n>=2),history:[],
+  server,history:[],
   startTs:Date.now()-(mins*60+secs)*1000};
 }
 function manualSummary(v){
  const pt=v.tiebreak?v.points.join('–'):v.points.map(i=>['0','15','30','40'][i]).join('–');
  return 'Puntos '+pt+'; juegos '+v.games.join('–')+'; sets '+v.sets.join('–')+
   '; saca '+(v.server===0?'rojo':'azul')+'; '+(v.tiebreak?'tie-break':'juego normal')+
-  (v.ended?'; partido terminado':'')+'. Se borrara el historial de puntos anterior.';
+  '. Se borrara el historial de puntos anterior.';
 }
 function saveManualCandidate(){
  if(!manualCandidate)return;
@@ -1086,7 +1179,7 @@ function askReplacement(mode){
 function askReset(){askReplacement('reset')}
 function reset(){
  clearManualBackup();
- s=blank(); // Estado desde cero: puntos, juegos, sets, saque, tiempo, tie-break, historial y finalización.
+ s=blank(); // Estado desde cero: puntos, juegos, sets, saque, tiempo, tie-break, historial.
  update(); // Incluye persistencia inmediata en localStorage.
  el('reset-confirm').close();
  notice('Nuevo partido iniciado');
@@ -1115,7 +1208,7 @@ function confirmReplacement(){
  else if(mode==='manual')saveManualCandidate();
  else if(mode==='rollback')restoreManualBackup();
 }
-function openMenu(){if(!el('modal').open)el('modal').showModal()}
+function openMenu(){hideSetSummary();if(!el('modal').open)el('modal').showModal()}
 el('modal').addEventListener('close',()=>{if(padLearning){padLearning=null;padUpdateUi();}});
 for (const [t,id] of [[0,'score-red'],[1,'score-blue']]){
  const node=el(id);
@@ -1214,6 +1307,7 @@ window.addEventListener('keydown',(e)=>{
  if(el('reset-confirm').open||el('manual-edit').open)return;
  if(el('modal').open){if(e.key==='Escape')el('modal').close();return}
  if(e.ctrlKey||e.metaKey||e.altKey)return;
+ if(e.key==='Escape'&&!el('set-summary').hidden){hideSetSummary();return}
  const k=e.key.toLowerCase();
  if(k==='1')addPoint(0); else if(k==='2')addPoint(1); else if(k==='q')setServer(0); else if(k==='w')setServer(1); else if(k==='z')undo(); else if(k==='m')openMenu();
 });
@@ -1234,7 +1328,7 @@ setTimeout(()=>notice('Toque: sumar · mantener puntaje: restar · mantener hora
  keys.forEach(k=>{const section=document.createElement('section');section.className='mb-menu-panel';section.dataset.section=k;section.hidden=true;section.innerHTML='<h3>'+names[k]+'</h3>';scroll.appendChild(section);panels[k]=section;});
  const move=(selector,k)=>{const node=modal.querySelector(selector);if(node)panels[k].appendChild(node);};
  // Apariencia y orientaciones originales: mismos botones, ids y controladores.
- move('.style-setting','apariencia');move('.layout-setting','apariencia');
+ move('.style-setting','apariencia');move('.layout-setting','apariencia');move('.summary-setting','apariencia');
  // Controles genericos, asignacion y deteccion existentes.
  move('.pad-section','controles');
  const mapping=panels.controles.querySelector('.pad-mapping');
@@ -1251,7 +1345,7 @@ setTimeout(()=>notice('Toque: sumar · mantener puntaje: restar · mantener hora
  if(tools)panels.herramientas.appendChild(tools);
  move('.about-matchboard','herramientas');
  move('#rules-pill','reglas');
- const rules=document.createElement('p');rules.className='mb-note';rules.textContent='Punto de oro en 40–40; tie-break automático al llegar a 6–6; partido a dos sets ganados. Se mantienen las reglas actuales.';panels.reglas.appendChild(rules);
+ const rules=document.createElement('p');rules.className='mb-note';rules.textContent='Punto de oro en 40–40; tie-break automático al llegar a 6–6; sets sin límite hasta iniciar un nuevo partido.';panels.reglas.appendChild(rules);
  const part=document.createElement('div');part.className='mb-note';part.innerHTML='<p>Inicia un partido nuevo desde la primera opción del menú. Se solicita confirmación antes de reiniciar puntos, juegos, sets, tiempo e historial.</p><p>También puedes deshacer la última jugada desde Herramientas o editar el resultado desde Edición manual.</p>';panels.partido.appendChild(part);
  // La navegación reemplaza el texto de ayuda antiguo, que se conserva en Herramientas.
  const description=intro.querySelector(':scope > p:not(.brand-sub)');const hint=intro.querySelector('.hint');

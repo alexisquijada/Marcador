@@ -42,3 +42,12 @@ El ícono completo para Google Play se encuentra en `play_store/icono_512.png`. 
 
 ## v3.10 — Bloqueo preventivo SELECT
 Al bloquear con SELECT, no aparece un mensaje ni un panel emergente: solo se muestra una franja amarilla gruesa de ancho completo pegada al borde inferior del marcador. No oscurece la pantalla, no ocupa espacio de diseño y no intercepta eventos táctiles. Al desbloquear, desaparece. Se mantiene la alerta de desconexión.
+
+
+## Marcador continuo y resumen de sets
+
+En la vista horizontal lado a lado, el equipo que saca aparece a la izquierda y conserva su color. El partido permite acumular sets hasta iniciar uno nuevo.
+
+Al completar cada set se muestra un resumen grande con los resultados de los sets registrados y los colores de los equipos. Vuelve automáticamente al marcador tras 10 segundos por defecto. El tiempo se configura en **Apariencia → Duración del resumen de sets**, entre 1 y 300 segundos, y se conserva al reiniciar el partido. También se puede cerrar con **Volver al marcador**; START alterna entre el marcador y el resumen. Al abrirlo con START, el resumen permanece visible hasta volver al marcador. Los puntos se registran únicamente en la vista del marcador.
+
+Los resultados detallados de sets se guardan desde esta función; las partidas antiguas conservan su total de sets, pero no se inventan resultados anteriores. Deshacer el punto que cerró un set elimina ese resultado del resumen. Cambiar el total de sets mediante edición manual borra el detalle anterior; iniciar un nuevo partido borra todo el historial de sets.
